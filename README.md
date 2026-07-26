@@ -48,8 +48,23 @@
 - **Node.js:** (Cho Frontend - nếu có)
 
 ### ⚙️ Cài Đặt (Backend Java - Spring Boot)
+# 1. Clone dự án
+git clone https://github.com/tecna1111/LTJV-HKHE
+cd LTJV-HKHE
 
+# 2. Cấu hình Database
+# Mở file src/main/resources/application.yml và cập nhật thông tin MySQL của bạn:
+# spring.datasource.url=jdbc:mysql://localhost:3306/collabsphere
+# spring.datasource.username=root
+# spring.datasource.password=yourpassword
+
+# 3. Build dự án với Maven
+mvn clean install
+
+# 4. Chạy ứng dụng
+mvn spring-boot:run
 ```bash
+📂 Cấu Trúc Dự Án
 CollabSphere/
 ├── backend/                  # Spring Boot (Java)
 │   ├── src/main/java/
