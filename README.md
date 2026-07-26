@@ -64,9 +64,9 @@ mvn clean install
 
 # 4. Chạy ứng dụng
 mvn spring-boot:run
-```bash
-📂 Cấu Trúc Dự Án
-```bash
+
+### 📂 Cấu Trúc Dự Án
+``` bash 
 CollabSphere/
 ├── backend/                  # Spring Boot (Java)
 │   ├── src/main/java/
