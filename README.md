@@ -48,6 +48,7 @@
 - **Node.js:** (Cho Frontend - nếu có)
 
 ### ⚙️ Cài Đặt (Backend Java - Spring Boot)
+```bash
 # 1. Clone dự án
 git clone https://github.com/tecna1111/LTJV-HKHE
 cd LTJV-HKHE
@@ -65,6 +66,7 @@ mvn clean install
 mvn spring-boot:run
 ```bash
 📂 Cấu Trúc Dự Án
+```bash
 CollabSphere/
 ├── backend/                  # Spring Boot (Java)
 │   ├── src/main/java/
