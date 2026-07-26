@@ -39,16 +39,7 @@
 
 ---
 
-##  Bắt Đầu Nhanh
-
-### Yêu Cầu Hệ Thống
-- **JDK:** 17 hoặc 21+
-- **Maven:** 3.8+
-- **Database:** MySQL 8.0+
-- **Node.js:** (Cho Frontend - nếu có)
-
 ### ⚙️ Cài Đặt (Backend Java - Spring Boot)
-```bash
 # 1. Clone dự án
 git clone https://github.com/tecna1111/LTJV-HKHE
 cd LTJV-HKHE
@@ -65,8 +56,7 @@ mvn clean install
 # 4. Chạy ứng dụng
 mvn spring-boot:run
 
-### 📂 Cấu Trúc Dự Án
-``` bash 
+### 📂 Cấu Trúc Dự Án 
 CollabSphere/
 ├── backend/                  # Spring Boot (Java)
 │   ├── src/main/java/
