@@ -56,8 +56,10 @@ mvn clean install
 
 # 4. Chạy ứng dụng
 mvn spring-boot:run
-
-### 📂 Cấu Trúc Dự Án 
+```
+``
+### 📂 Cấu Trúc Dự Án
+```bash
 CollabSphere/
 ├── backend/                  # Spring Boot (Java)
 │   ├── src/main/java/
@@ -71,3 +73,4 @@ CollabSphere/
 ├── frontend/                 # Tương tác giao diện người dùng
 ├── ai-service/               # (Tùy chọn) Microservice xử lý AI Python/Java
 └── docs/                     # Tài liệu thiết kế, sơ đồ, UML
+```
