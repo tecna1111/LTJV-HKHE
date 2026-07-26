@@ -6,19 +6,11 @@
 ![MySQL](https://img.shields.io/badge/MySQL-8.0%2B-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
 ![Status](https://img.shields.io/badge/Status-Active_Development-yellow?style=for-the-badge)
 
----
+```
 
-## 📖 Bối Cảnh & Giải Pháp
+##  Tính Năng Nổi Bật
 
-Trong giáo dục hiện đại, **Học tập Dựa trên Dự án (PBL)** là phương pháp cốt lõi giúp sinh viên phát triển kỹ năng thực tiễn. Tuy nhiên, việc phải sử dụng quá nhiều nền tảng rời rạc (chat, họp video, quản lý task, bảng trắng...) làm giảm hiệu suất làm việc nhóm và khó khăn trong việc theo dõi, đánh giá của giảng viên.
-
-**CollabSphere (COSRE)** ra đời nhằm cung cấp một nền tảng quản lý dự án và cộng tác thời gian thực **tất-cả-trong-một**. Hệ thống hợp nhất giao tiếp, quản lý không gian làm việc, bảng trắng, hệ thống đánh giá chéo và tích hợp AI, giúp tạo ra một môi trường học tập thực hành liền mạch và hiệu quả.
-
----
-
-## ✨ Tính Năng Nổi Bật
-
-### 🛠 Dành cho Quản lý & Học thuật
+###  Dành cho Quản lý & Học thuật
 - **Quản lý toàn diện:** Tự động hóa tạo tài khoản, lớp học, môn học qua file nhập (Import).
 - **Quản lý dự án đa cấp:** Từ Trưởng bộ môn (phê duyệt) đến Giảng viên (tạo, phân công, giám sát).
 - **Hệ thống đánh giá đa chiều:** Giảng viên đánh giá nhóm/cá nhân, sinh viên đánh giá chéo (peer-review) theo từng mốc dự án.
