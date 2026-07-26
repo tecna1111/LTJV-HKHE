@@ -40,7 +40,7 @@
 ---
 
 ### ⚙️ Cài Đặt (Backend Java - Spring Boot)
-```
+```bash
 # 1. Clone dự án
 git clone https://github.com/tecna1111/LTJV-HKHE
 cd LTJV-HKHE
@@ -57,7 +57,7 @@ mvn clean install
 # 4. Chạy ứng dụng
 mvn spring-boot:run
 ```
-``
+
 ### 📂 Cấu Trúc Dự Án
 ```bash
 CollabSphere/
