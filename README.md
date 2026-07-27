@@ -1,3 +1,4 @@
+Markdown
 # 🌐 CollabSphere (COSRE)
 **Hệ thống hỗ trợ việc học theo phương pháp học tập dựa trên dự án (Project-Based Learning)**
 
@@ -6,9 +7,7 @@
 ![MySQL](https://img.shields.io/badge/MySQL-8.0%2B-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
 ![Status](https://img.shields.io/badge/Status-Active_Development-yellow?style=for-the-badge)
 
-
-
-## Tính Năng Nổi Bật
+## ✨ Tính Năng Nổi Bật
 
 ### Dành cho Quản lý & Học thuật
 - **Quản lý toàn diện:** Tự động hóa tạo tài khoản, lớp học, môn học qua file nhập (Import).
@@ -27,7 +26,7 @@
 
 ---
 
-## Vai Trò Người Dùng
+## 👥 Vai Trò Người Dùng
 
 | Vai trò | Phân quyền chính |
 |---|---|
@@ -39,38 +38,89 @@
 
 ---
 
-### ⚙️ Cài Đặt (Backend Java - Spring Boot)
-```bash
-# 1. Clone dự án
-git clone https://github.com/tecna1111/LTJV-HKHE
-cd LTJV-HKHE
+## 📂 Cấu Trúc Dự Án
+
+```text
+LTJV-HKHE/
+├── docs/                                  # Tài liệu thiết kế, báo cáo, sơ đồ UML (Tuần 1)
+│
+├── Cosre_Backend/                         # Spring Boot Application
+│   ├── mvnw
+│   ├── mvnw.cmd
+│   ├── pom.xml
+│   └── src/main/
+│       ├── java/collabsphere/
+│       │   ├── CollabSphereApplication.java
+│       │   ├── config/                    # Security, WebSocket, Async Config
+│       │   ├── controller/                # REST API Controllers
+│       │   ├── dto/                       # Request & Response DTOs
+│       │   ├── entity/                    # Database Entities (JPA / Hibernate)
+│       │   ├── enums/                     # Status & Role Enums
+│       │   ├── exception/                 # Global Exception Handling
+│       │   ├── repository/                # JPA Repositories
+│       │   ├── security/                  # JWT Authentication
+│       │   ├── service/                   # Business Logic & AI
+│       │   └── websocket/                 # Real-time Event Handlers
+│       └── resources/                     # application.yml, Email Templates
+│
+├── Cosre_Frontend/                        # React + Vite Application
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── public/
+│   └── src/
+│       ├── App.jsx                        # Router & Main Routes
+│       ├── main.jsx                       # Entry Point
+│       ├── api/                           # Axios Services
+│       ├── assets/                        # Static Images & Icons
+│       ├── components/                    # Reusable UI & Widgets
+│       ├── context/                       # React Contexts (Auth, Socket, Workspace)
+│       ├── hooks/                         # Custom Hooks
+│       ├── pages/                         # Pages grouped by Roles
+│       └── utils/                         # Helper functions & constants
+│
+├── .gitignore
+└── README.md
+
+
+⚙️ Hướng Dẫn Cài Đặt & Chạy Dự Án
+Backend (Spring Boot)
+Bash
+# 1. Clone dự án về máy
+git clone [https://github.com/tecna1111/LTJV-HKHE](https://github.com/tecna1111/LTJV-HKHE)
+cd LTJV-HKHE/Cosre_Backend
 
 # 2. Cấu hình Database
-# Mở file src/main/resources/application.yml và cập nhật thông tin MySQL của bạn:
-# spring.datasource.url=jdbc:mysql://localhost:3306/collabsphere
-# spring.datasource.username=root
-# spring.datasource.password=yourpassword
+# Mở file src/main/resources/application.yml và cập nhật thông tin MySQL
 
-# 3. Build dự án với Maven
+# 3. Build và Chạy ứng dụng
 mvn clean install
-
-# 4. Chạy ứng dụng
 mvn spring-boot:run
-```
 
-### 📂 Cấu Trúc Dự Án
-```bash
-CollabSphere/
-├── backend/                  # Spring Boot (Java)
-│   ├── src/main/java/
-│   │   └── com/cosre/
-│   │       ├── config/       # Cấu hình Security, WebSocket, AI
-│   │       ├── controllers/  # API Endpoints
-│   │       ├── models/       # Entities (User, Project, Task,...)
-│   │       ├── repositories/ # Database Access
-│   │       └── services/     # Business Logic
-│   └── pom.xml
-├── frontend/                 # Tương tác giao diện người dùng
-├── ai-service/               # (Tùy chọn) Microservice xử lý AI Python/Java
-└── docs/                     # Tài liệu thiết kế, sơ đồ, UML
-```
+Frontend (React + Vite)
+
+Bash
+# 1. Chuyển sang thư mục Frontend
+cd LTJV-HKHE/Cosre_Frontend
+
+# 2. Cài đặt các thư viện phụ thuộc
+npm install
+
+# 3. Chạy môi trường Development
+npm run dev
+
+📌 Quy Tắc Viết Commit Message (Conventional Commits)
+Plaintext
+<type>(<scope>): <mô tả ngắn gọn>
+feat: Thêm tính năng mới (vd: feat(auth): thêm API đăng nhập JWT)
+
+fix: Sửa lỗi (vd: fix(chat): sửa lỗi mất kết nối websocket)
+
+docs: Tài liệu/README (vd: docs(srs): cập nhật sơ đồ Use Case)
+
+style: Định dạng CSS/UI (vd: style(sidebar): chỉnh lại padding)
+
+refactor: Tối ưu hóa code (vd: refactor(service): tối ưu truy vấn JPA)
+
+chore: Cấu hình/Thư viện (vd: chore: cài đặt thư viện TailwindCSS)
