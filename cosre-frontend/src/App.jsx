@@ -3,7 +3,8 @@ import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
 import './App.css'
-
+import CreateProjectPage from "./features/lecturer/pages/CreateProjectPage";
+<Route path="/lecturer/projects/new" element={<CreateProjectPage />} />
 function App() {
   const [count, setCount] = useState(0)
 
