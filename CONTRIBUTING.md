@@ -1,316 +1,340 @@
-# Hướng dẫn phát triển COSRE
+# Hướng dẫn chạy và đóng góp COSRE
 
-Tài liệu này hướng dẫn cài đặt, chạy và kiểm tra source code COSRE trên máy local.
+Tài liệu này hướng dẫn thiết lập môi trường, chạy toàn bộ hệ thống và kiểm tra source trước khi đóng góp code.
 
-## 1. Yêu cầu môi trường
+## Yêu cầu môi trường
 
-Cài đặt các công cụ sau:
-
-- Git.
-- JDK 17 trở lên.
-- Maven 3.9 trở lên, hoặc sử dụng Maven Wrapper có sẵn trong project.
-- Node.js 20.19 trở lên.
-- npm 10 trở lên.
-- MySQL 8 chỉ cần thiết khi chạy profile `mysql`.
+- Git
+- JDK 17 trở lên
+- Maven 3.9 trở lên hoặc Maven Wrapper trong project
+- Node.js 20.19 trở lên
+- npm 10 trở lên
+- MySQL 8 (chỉ cần khi chạy profile `mysql`)
 
 Kiểm tra phiên bản:
 
-```bash
+```powershell
+git --version
 java -version
 mvn -version
-node -v
-npm -v
+node --version
+npm.cmd --version
 ```
 
-## 2. Clone source code
+## Lấy source code
 
-```bash
+```powershell
 git clone https://github.com/tecna1111/LTJV-HKHE.git
 cd LTJV-HKHE
 ```
 
-Cấu trúc chính:
+## Chạy web nhanh với H2
 
-```text
-LTJV-HKHE/
-├── cosre-backend/       Spring Boot REST API
-├── cosre-frontend/      React + Vite
-├── docs/                Tài liệu dự án
-└── CONTRIBUTING.md
-```
+Đây là cách được khuyến nghị cho môi trường development. H2 chạy trong bộ nhớ nên không cần cài đặt database riêng.
 
-## 3. Chạy Backend với H2
+### Bước 1: chạy Backend
 
-Profile mặc định là `dev`, sử dụng H2 in-memory nên không cần cài MySQL.
-
-### Windows PowerShell
+Mở PowerShell thứ nhất:
 
 ```powershell
-cd cosre-backend
+cd D:\JAVA\LTJV-HKHE\cosre-backend
 .\mvnw.cmd spring-boot:run
 ```
 
-Nếu Maven Wrapper không chạy trên máy, sử dụng Maven đã cài:
+Nếu Maven Wrapper gặp lỗi:
 
 ```powershell
 mvn spring-boot:run
 ```
 
-### macOS/Linux
-
-```bash
-cd cosre-backend
-chmod +x mvnw
-./mvnw spring-boot:run
-```
-
-Backend chạy tại:
+Chờ đến khi terminal hiển thị ứng dụng đã `Started`. Backend chạy tại:
 
 ```text
 http://localhost:8080
 ```
 
-H2 Console:
+### Bước 2: chạy Frontend
 
-```text
-http://localhost:8080/h2-console
+Mở PowerShell thứ hai:
+
+```powershell
+cd D:\JAVA\LTJV-HKHE\cosre-frontend
+npm.cmd install
+Copy-Item .env.example .env -ErrorAction SilentlyContinue
+npm.cmd run dev
 ```
 
-Thông tin kết nối H2:
+Vite sẽ hiển thị URL thực tế, ví dụ:
 
 ```text
-JDBC URL: jdbc:h2:mem:cosre
-Username: sa
-Password: để trống
+http://localhost:5173
 ```
 
-Tài khoản phát triển mặc định:
+Nếu port này bận, Vite tự chọn port tiếp theo như `5174` hoặc `5175`. Hãy truy cập đúng URL được in trong terminal.
+
+### Bước 3: đăng nhập
+
+Mở `/login`, chọn vai trò Admin và nhập:
 
 ```text
 Username: admin
 Password: Admin@123
 ```
 
-Tài khoản này chỉ được tự động tạo trong profile `dev` và không được sử dụng trong production.
+Đăng nhập thành công sẽ chuyển đến `/dashboard`.
 
-## 4. Chạy Backend với MySQL
+## Cấu hình H2 Console
 
-Tạo database trước:
+Truy cập:
 
-```sql
-CREATE DATABASE cosre CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```text
+http://localhost:8080/h2-console
 ```
 
-### Windows PowerShell
+Thông tin kết nối:
+
+```text
+Driver Class: org.h2.Driver
+JDBC URL:     jdbc:h2:mem:cosre
+Username:     sa
+Password:     để trống
+```
+
+Nhấn `Connect` để xem bảng `USERS`. Dữ liệu H2 sẽ mất khi Backend dừng.
+
+## Chạy Backend với MySQL
+
+### Bước 1: tạo database
+
+```sql
+CREATE DATABASE cosre
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
+```
+
+### Bước 2: khai báo biến môi trường
+
+Windows PowerShell:
 
 ```powershell
-cd cosre-backend
+cd D:\JAVA\LTJV-HKHE\cosre-backend
+
 $env:SPRING_PROFILES_ACTIVE = "mysql"
 $env:DB_URL = "jdbc:mysql://localhost:3306/cosre?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
 $env:DB_USERNAME = "root"
 $env:DB_PASSWORD = "your_password"
 $env:JWT_SECRET = "replace-with-a-secure-secret-key-at-least-32-characters"
 $env:CORS_ALLOWED_ORIGIN_PATTERNS = "http://localhost:5173"
+
 .\mvnw.cmd spring-boot:run
 ```
 
-### macOS/Linux
+macOS/Linux:
 
 ```bash
 cd cosre-backend
 export SPRING_PROFILES_ACTIVE=mysql
 export DB_URL='jdbc:mysql://localhost:3306/cosre?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true'
 export DB_USERNAME=root
-export DB_PASSWORD=your_password
+export DB_PASSWORD='your_password'
 export JWT_SECRET='replace-with-a-secure-secret-key-at-least-32-characters'
 export CORS_ALLOWED_ORIGIN_PATTERNS='http://localhost:5173'
 ./mvnw spring-boot:run
 ```
 
-Profile `mysql` không tự tạo tài khoản Admin. Cần seed tài khoản bằng migration, script dữ liệu hoặc bật bootstrap có kiểm soát:
+### Tạo Admin đầu tiên trong MySQL
 
-```text
-BOOTSTRAP_ADMIN_ENABLED=true
-BOOTSTRAP_ADMIN_USERNAME=admin
-BOOTSTRAP_ADMIN_EMAIL=admin@example.com
-BOOTSTRAP_ADMIN_PASSWORD=change-this-password
-```
-
-Tắt bootstrap sau khi tài khoản đầu tiên đã được tạo.
-
-## 5. Chạy Frontend
-
-Mở terminal mới tại thư mục gốc project:
-
-```bash
-cd cosre-frontend
-npm install
-```
-
-Tạo file `.env` từ file mẫu.
-
-### Windows PowerShell
+Profile `mysql` mặc định không tự tạo Admin. Có thể bật bootstrap tạm thời:
 
 ```powershell
-Copy-Item .env.example .env
-npm run dev
+$env:BOOTSTRAP_ADMIN_ENABLED = "true"
+$env:BOOTSTRAP_ADMIN_USERNAME = "admin"
+$env:BOOTSTRAP_ADMIN_EMAIL = "admin@example.com"
+$env:BOOTSTRAP_ADMIN_PASSWORD = "change-this-password"
 ```
 
-### macOS/Linux
+Sau khi Admin được tạo thành công, dừng Backend và tắt bootstrap:
 
-```bash
-cp .env.example .env
-npm run dev
+```powershell
+$env:BOOTSTRAP_ADMIN_ENABLED = "false"
 ```
 
-Frontend chạy tại:
+Không sử dụng password mặc định trong môi trường thật.
 
-```text
-http://localhost:5173
-```
+## Biến môi trường
 
-Cấu hình API mặc định trong `.env`:
+### Backend
+
+| Biến | Mặc định development | Ý nghĩa |
+|---|---|---|
+| `SERVER_PORT` | `8080` | Port Backend |
+| `SPRING_PROFILES_ACTIVE` | `dev` | Profile `dev` hoặc `mysql` |
+| `JWT_SECRET` | Development secret | Khóa ký JWT, production phải thay đổi |
+| `JWT_EXPIRATION_MS` | `86400000` | Thời hạn JWT, mặc định 24 giờ |
+| `CORS_ALLOWED_ORIGIN_PATTERNS` | Localhost mọi port | Origin được phép gọi API |
+| `DB_URL` | MySQL local | JDBC URL cho profile MySQL |
+| `DB_USERNAME` | `root` | Username MySQL |
+| `DB_PASSWORD` | Trống | Password MySQL |
+
+### Frontend
+
+File `.env`:
 
 ```dotenv
 VITE_API_URL=http://localhost:8080/api/v1
 ```
 
-Không commit file `.env` hoặc thông tin bí mật lên Git.
+Khi thay đổi `.env`, cần restart Vite development server.
 
-## 6. Thứ tự chạy toàn bộ hệ thống
+## API đăng nhập
 
-1. Chạy Backend tại port `8080`.
-2. Chạy Frontend tại port `5173`.
-3. Truy cập `http://localhost:5173`.
-4. Đăng nhập bằng tài khoản dev hoặc tài khoản trong MySQL.
+### Đăng nhập
 
-## 7. Kiểm tra source trước khi tạo Pull Request
+```http
+POST /api/v1/auth/login
+Content-Type: application/json
 
-### Backend
-
-```bash
-cd cosre-backend
-./mvnw test
+{
+  "username": "admin",
+  "password": "Admin@123"
+}
 ```
 
-Trên Windows:
+Đăng nhập thành công trả HTTP `200`. Sai thông tin đăng nhập trả HTTP `401`.
+
+### Lấy người dùng hiện tại
+
+```http
+GET /api/v1/auth/me
+Authorization: Bearer <token>
+```
+
+## Kiểm tra trước khi commit
+
+Backend:
 
 ```powershell
-cd cosre-backend
+cd D:\JAVA\LTJV-HKHE\cosre-backend
 .\mvnw.cmd test
 ```
 
-### Frontend
+Frontend:
 
-```bash
-cd cosre-frontend
-npm run lint
-npm run build
+```powershell
+cd D:\JAVA\LTJV-HKHE\cosre-frontend
+npm.cmd run lint
+npm.cmd run build
 ```
 
-Chỉ tạo Pull Request khi test Backend, lint và build Frontend đều thành công.
+Các kiểm tra trên phải thành công trước khi tạo Pull Request.
 
-## 8. Quy ước tổ chức code
+## Quy ước tổ chức code
 
-Backend sử dụng cấu trúc module-first:
+Backend:
 
 ```text
 modules/<module>/
-├── controller/          REST endpoints
-├── dto/                 Request và response models
-├── entity/              JPA entities
-├── repository/          Truy cập database
-└── service/             Business logic
+|-- controller/     REST API và HTTP mapping
+|-- dto/            Request/response models
+|-- entity/         JPA entities
+|-- repository/     Truy cập database
+`-- service/        Business logic
 ```
 
-Nguyên tắc Backend:
+- Controller không chứa business logic.
+- API sử dụng DTO, không trả entity có dữ liệu nhạy cảm.
+- Request phải được validate bằng Jakarta Validation.
+- Exception được xử lý tập trung trong `common/exception`.
+- Password phải được mã hóa; không lưu plain text.
 
-- Không trả trực tiếp entity chứa dữ liệu nhạy cảm qua API.
-- Request/response phải dùng DTO.
-- Validate request bằng Jakarta Validation.
-- Business logic đặt trong service, không đặt trong controller.
-- Repository chỉ chịu trách nhiệm truy cập dữ liệu.
-- Exception dùng handler tập trung trong `common/exception`.
-- Không hard-code password, JWT secret hoặc thông tin database.
-
-Frontend sử dụng cấu trúc module-first:
+Frontend:
 
 ```text
 src/
-├── config/              Cấu hình dùng chung
-├── routes/              Router và route guards
-├── store/               Global state
-└── modules/<module>/
-    ├── pages/            Route-level components
-    └── *Service.js       API calls của module
+|-- config/         Cấu hình Axios
+|-- routes/         Router và ProtectedRoute
+|-- store/          Global state
+`-- modules/
+    `-- <module>/   Page, component và service theo nghiệp vụ
 ```
-
-Nguyên tắc Frontend:
 
 - API call đặt trong service của module.
-- URL API đọc từ biến môi trường.
-- Page không hard-code token hoặc thông tin đăng nhập.
-- Route cần đăng nhập phải đi qua `ProtectedRoute`.
-- Chạy ESLint trước khi commit.
+- Route riêng tư phải đi qua `ProtectedRoute`.
+- URL Backend phải đọc từ biến môi trường.
+- Không hard-code JWT hoặc thông tin nhạy cảm trong component.
 
-## 9. Quy ước Git
+## Quy trình Git
 
-Tạo branch riêng cho từng thay đổi:
-
-```bash
-git checkout -b feature/ten-tinh-nang
-```
-
-Commit theo Conventional Commits:
-
-```text
-feat(auth): add refresh token
-fix(account): prevent duplicate email
-refactor(user): separate response dto
-docs: update local setup guide
-test(auth): add login service tests
-chore: update dependencies
-```
-
-Không commit các file sau:
-
-- `.env`.
-- Password hoặc API key.
-- `node_modules/`.
-- `dist/`.
-- `target/`.
-- IDE configuration cá nhân.
-
-## 10. Lỗi thường gặp
-
-### Port đã được sử dụng
-
-Đổi port Backend:
+Tạo nhánh từ `main`:
 
 ```powershell
-$env:SERVER_PORT = "8081"
+git switch main
+git pull origin main
+git switch -c feature/ten-tinh-nang
 ```
 
-Sau đó cập nhật `VITE_API_URL` của Frontend tương ứng.
+Kiểm tra và commit:
+
+```powershell
+git status
+git add .
+git commit -m "feat(auth): hoàn thiện luồng đăng nhập"
+git push -u origin feature/ten-tinh-nang
+```
+
+Các loại commit thường dùng:
+
+- `feat`: thêm chức năng.
+- `fix`: sửa lỗi.
+- `refactor`: tái cấu trúc code.
+- `docs`: cập nhật tài liệu.
+- `test`: thêm hoặc sửa test.
+- `chore`: cấu hình và dependency.
+
+Không commit `.env`, password, API key, JWT secret, `node_modules`, `dist` hoặc `target`.
+
+## Lỗi thường gặp
+
+### `OPTIONS /login` trả 403
+
+Nguyên nhân thường là Frontend đang chạy ở port khác origin được Backend cho phép. Trong profile `dev`, Backend mặc định cho phép `localhost` và `127.0.0.1` ở mọi port.
+
+Sau khi sửa cấu hình CORS, phải restart Backend.
 
 ### Frontend không gọi được Backend
 
 Kiểm tra:
 
-- Backend đang chạy.
-- `VITE_API_URL` đúng.
-- `CORS_ALLOWED_ORIGIN_PATTERNS` chứa URL Frontend.
-- Request có header `Authorization: Bearer <token>` với API bảo vệ.
-
-### Không kết nối được MySQL
-
-Kiểm tra database đã tồn tại, MySQL đang chạy và các biến `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` chính xác.
+1. Backend đã chạy tại port `8080`.
+2. `VITE_API_URL` trỏ đến `http://localhost:8080/api/v1`.
+3. Frontend origin nằm trong `CORS_ALLOWED_ORIGIN_PATTERNS`.
+4. Reload trình duyệt bằng `Ctrl + Shift + R`.
 
 ### PowerShell chặn `npm.ps1`
 
-Có thể gọi executable Windows trực tiếp:
+Sử dụng executable Windows:
 
 ```powershell
 npm.cmd install
 npm.cmd run dev
 ```
+
+### Port đang được sử dụng
+
+Đổi port Backend:
+
+```powershell
+$env:SERVER_PORT = "8081"
+.\mvnw.cmd spring-boot:run
+```
+
+Sau đó cập nhật `VITE_API_URL` tương ứng và restart Frontend.
+
+## Liên hệ và Pull Request
+
+Pull Request cần mô tả rõ:
+
+- Vấn đề hoặc chức năng được xử lý.
+- Thay đổi chính ở Backend/Frontend.
+- Cách kiểm thử.
+- Ảnh giao diện nếu có thay đổi UI.
