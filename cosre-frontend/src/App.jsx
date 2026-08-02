@@ -5,6 +5,9 @@ import heroImg from './assets/hero.png'
 import './App.css'
 import CreateProjectPage from "./features/lecturer/pages/CreateProjectPage";
 <Route path="/lecturer/projects/new" element={<CreateProjectPage />} />
+
+import CreateProjectPage from "./features/lecturer/pages/CreateProjectPage";
+
 function App() {
   const [count, setCount] = useState(0)
 
