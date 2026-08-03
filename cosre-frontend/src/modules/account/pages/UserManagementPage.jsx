@@ -1,185 +1,130 @@
-import { useEffect, useState } from 'react';
-import { getUsers, createUser, updateUser, deleteUser, setUserStatus } from '../accountService';
-import useAuthStore from '../../../store/useAuthStore';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, Filter, Search, ShieldAlert, UserRoundCheck, Users } from 'lucide-react';
+import AdminLayout from '../../../components/admin/AdminLayout';
 import { getApiError } from '../../../config/axios';
+import { getUsers, setUserStatus } from '../accountService';
+import './UserManagementPage.css';
 
-const defaultForm = {
-  username: '',
-  email: '',
-  password: '',
-  fullName: '',
-  role: 'STUDENT',
+const roleLabels = {
+  ADMIN: 'Quản trị viên',
+  HEAD_DEPT: 'Trưởng bộ môn',
+  STAFF: 'Cán bộ đào tạo',
+  LECTURER: 'Giảng viên',
+  STUDENT: 'Sinh viên',
 };
+
+const filterRoles = ['ALL', 'HEAD_DEPT', 'STAFF', 'LECTURER', 'STUDENT', 'ADMIN'];
 
 function UserManagementPage() {
   const [users, setUsers] = useState([]);
-  const [form, setForm] = useState(defaultForm);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [editingId, setEditingId] = useState(null);
-  const clearAuth = useAuthStore((state) => state.clearAuth);
-  const navigate = useNavigate();
+  const [query, setQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('ALL');
+  const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState(null);
+  const [feedback, setFeedback] = useState({ type: '', text: '' });
 
-  async function loadUsers() {
+  const loadUsers = async () => {
     try {
       const result = await getUsers();
-      if (result.success) {
-        setUsers(result.data || []);
-      }
-    } catch (err) {
-      setError(getApiError(err, 'Không thể tải danh sách người dùng'));
+      if (result.success) setUsers(result.data || []);
+    } catch (error) {
+      setFeedback({ type: 'error', text: getApiError(error, 'Không thể tải danh sách tài khoản.') });
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
     getUsers()
-      .then((result) => {
-        if (result.success) setUsers(result.data || []);
-      })
-      .catch((err) => setError(getApiError(err, 'Không thể tải danh sách người dùng')));
+      .then((result) => { if (result.success) setUsers(result.data || []); })
+      .catch((error) => setFeedback({ type: 'error', text: getApiError(error, 'Không thể tải danh sách tài khoản.') }))
+      .finally(() => setLoading(false));
   }, []);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setError('');
-    setSuccess('');
-    try {
-      if (editingId) {
-        await updateUser(editingId, {
-          fullName: form.fullName,
-          role: form.role,
-          isActive: form.isActive,
-        });
-        setSuccess('User updated');
-      } else {
-        await createUser(form);
-        setSuccess('User created');
-      }
-      setForm(defaultForm);
-      setEditingId(null);
-      loadUsers();
-    } catch (err) {
-      setError(getApiError(err, 'Không thể lưu người dùng'));
+  const shownUsers = useMemo(() => users.filter((user) => {
+    const keyword = query.trim().toLowerCase();
+    const matchesRole = roleFilter === 'ALL' || user.role === roleFilter;
+    const matchesText = !keyword || `${user.fullName} ${user.username} ${user.email}`.toLowerCase().includes(keyword);
+    return matchesRole && matchesText;
+  }), [query, roleFilter, users]);
+
+  const toggleStatus = async (user) => {
+    if (user.role === 'ADMIN') {
+      setFeedback({ type: 'error', text: 'Không thể vô hiệu hóa tài khoản quản trị từ màn hình này.' });
+      return;
     }
-  };
-
-  const handleEdit = (user) => {
-    setEditingId(user.id);
-    setForm({
-      username: user.username,
-      email: user.email,
-      password: '',
-      fullName: user.fullName,
-      role: user.role,
-      isActive: user.active,
-    });
-  };
-
-  const handleDelete = async (id) => {
-    try {
-      await deleteUser(id);
-      setSuccess('User deleted');
-      loadUsers();
-    } catch (err) {
-      setError(getApiError(err, 'Không thể xóa người dùng'));
-    }
-  };
-
-  const handleStatus = async (user) => {
+    setUpdatingId(user.id);
+    setFeedback({ type: '', text: '' });
     try {
       await setUserStatus(user.id, !user.active);
-      setSuccess('User status updated');
-      loadUsers();
-    } catch (err) {
-      setError(getApiError(err, 'Không thể cập nhật trạng thái'));
+      setFeedback({ type: 'success', text: `Đã ${user.active ? 'vô hiệu hóa' : 'kích hoạt lại'} tài khoản ${user.username}.` });
+      await loadUsers();
+    } catch (error) {
+      setFeedback({ type: 'error', text: getApiError(error, 'Không thể cập nhật trạng thái tài khoản.') });
+    } finally {
+      setUpdatingId(null);
     }
-  };
-
-  const handleLogout = () => {
-    clearAuth();
-    navigate('/login');
   };
 
   return (
-    <div style={{ padding: 16 }}>
-      <h1>Quản lý người dùng</h1>
-      <button onClick={handleLogout}>Logout</button>
-      <section style={{ marginTop: 24 }}>
-        <h2>{editingId ? 'Chỉnh sửa tài khoản' : 'Tạo tài khoản mới'}</h2>
-        <form onSubmit={handleSubmit}>
-          {!editingId && (
-            <>
-              <div>
-                <label>Username</label>
-                <input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
-              </div>
-              <div>
-                <label>Email</label>
-                <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-              </div>
-              <div>
-                <label>Password</label>
-                <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-              </div>
-            </>
-          )}
-          <div>
-            <label>Full name</label>
-            <input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required />
-          </div>
-          <div>
-            <label>Role</label>
-            <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-              <option value="ADMIN">ADMIN</option>
-              <option value="HEAD_DEPT">HEAD_DEPT</option>
-              <option value="STAFF">STAFF</option>
-              <option value="LECTURER">LECTURER</option>
-              <option value="STUDENT">STUDENT</option>
-            </select>
-          </div>
-          <button type="submit">{editingId ? 'Cập nhật' : 'Tạo mới'}</button>
-        </form>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        {success && <p style={{ color: 'green' }}>{success}</p>}
+    <AdminLayout activeTab="accounts" title="Quản lý tài khoản">
+      <section className="accounts-page-heading">
+        <div><span>ACCOUNT MANAGEMENT</span><h2>Tài khoản hệ thống</h2><p>Xem và kiểm soát quyền truy cập của người dùng CollabSphere.</p></div>
+        <div className="accounts-summary"><Users size={17} /><span><strong>{users.length}</strong><small>Tổng tài khoản</small></span></div>
       </section>
 
-      <section style={{ marginTop: 32 }}>
-        <h2>Danh sách người dùng</h2>
-        <table border="1" cellPadding="8" cellSpacing="0">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Username</th>
-              <th>Email</th>
-              <th>Full name</th>
-              <th>Role</th>
-              <th>Active</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id}>
-                <td>{user.id}</td>
-                <td>{user.username}</td>
-                <td>{user.email}</td>
-                <td>{user.fullName}</td>
-                <td>{user.role}</td>
-                <td>{user.active ? 'Yes' : 'No'}</td>
-                <td>
-                  <button onClick={() => handleEdit(user)}>Edit</button>
-                  <button onClick={() => handleDelete(user.id)}>Delete</button>
-                  <button onClick={() => handleStatus(user)}>
-                    {user.active ? 'Deactivate' : 'Activate'}
-                  </button>
-                </td>
-              </tr>
+      {feedback.text && (
+        <div className={`accounts-feedback ${feedback.type}`} role="status">
+          {feedback.type === 'success' ? <CheckCircle2 size={16} /> : <ShieldAlert size={16} />}
+          {feedback.text}
+        </div>
+      )}
+
+      <section className="accounts-panel">
+        <div className="accounts-toolbar">
+          <label className="accounts-search"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm tên, username hoặc email…" /></label>
+          <div className="accounts-filter-label"><Filter size={14} /> Lọc vai trò</div>
+          <div className="role-filters">
+            {filterRoles.map((role) => (
+              <button type="button" className={roleFilter === role ? 'active' : ''} onClick={() => setRoleFilter(role)} key={role}>
+                {role === 'ALL' ? 'Tất cả' : roleLabels[role]}
+              </button>
             ))}
-          </tbody>
-        </table>
+          </div>
+        </div>
+
+        <div className="accounts-table-wrap">
+          <table>
+            <thead><tr><th>Người dùng</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th>Quyền truy cập</th></tr></thead>
+            <tbody>
+              {shownUsers.map((user) => (
+                <tr key={user.id}>
+                  <td><div className="account-user"><span>{(user.fullName || user.username).slice(0, 1).toUpperCase()}</span><div><strong>{user.fullName}</strong><small>@{user.username}</small></div></div></td>
+                  <td><span className="account-email">{user.email}</span></td>
+                  <td><span className={`account-role role-${user.role.toLowerCase()}`}>{roleLabels[user.role]}</span></td>
+                  <td><span className={`account-status ${user.active ? 'on' : 'off'}`}><i />{user.active ? 'Hoạt động' : 'Đã vô hiệu hóa'}</span></td>
+                  <td>
+                    <button
+                      type="button"
+                      className={`account-access-button ${user.active ? 'deactivate' : 'activate'}`}
+                      disabled={updatingId === user.id || user.role === 'ADMIN'}
+                      title={user.role === 'ADMIN' ? 'Không thể thay đổi tài khoản quản trị tại đây' : undefined}
+                      onClick={() => toggleStatus(user)}
+                    >
+                      {updatingId === user.id ? 'Đang cập nhật…' : user.active ? 'Vô hiệu hóa' : 'Kích hoạt lại'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!loading && shownUsers.length === 0 && <div className="accounts-empty"><UserRoundCheck size={28} /><p>Không tìm thấy tài khoản phù hợp.</p></div>}
+          {loading && <div className="accounts-empty"><span className="accounts-spinner" /><p>Đang tải tài khoản…</p></div>}
+        </div>
       </section>
-    </div>
+
+      <p className="accounts-permission-note"><ShieldAlert size={14} /> Theo đặc tả COSRE, Admin xem và vô hiệu hóa tài khoản; chức năng tạo/import và phân lớp thuộc vai trò Staff.</p>
+    </AdminLayout>
   );
 }
 
