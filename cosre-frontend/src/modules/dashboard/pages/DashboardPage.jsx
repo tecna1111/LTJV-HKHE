@@ -1,81 +1,103 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Bell, ChevronRight, CircleUserRound, FolderKanban, GraduationCap, Layers3, LogOut, ShieldCheck, Users } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Activity, ShieldCheck, UserCheck, UserMinus, Users } from 'lucide-react';
+import AdminLayout from '../../../components/admin/AdminLayout';
 import useAuthStore from '../../../store/useAuthStore';
+import { getUsers } from '../../account/accountService';
 import { getCurrentUser } from '../dashboardService';
 import './DashboardPage.css';
 
+const roleLabels = {
+  ADMIN: 'Quản trị viên',
+  HEAD_DEPT: 'Trưởng bộ môn',
+  STAFF: 'Cán bộ đào tạo',
+  LECTURER: 'Giảng viên',
+  STUDENT: 'Sinh viên',
+};
+
+const roleOrder = ['HEAD_DEPT', 'STAFF', 'LECTURER', 'STUDENT', 'ADMIN'];
+
 function DashboardPage() {
-  const storedName = useAuthStore((state) => state.fullName);
-  const storedUsername = useAuthStore((state) => state.username);
   const storedRole = useAuthStore((state) => state.role);
-  const clearAuth = useAuthStore((state) => state.clearAuth);
   const [profile, setProfile] = useState(null);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
 
   useEffect(() => {
     getCurrentUser()
-      .then((result) => {
-        if (result.success) setProfile(result.data);
-        else setError(result.message || 'Không thể tải thông tin tài khoản.');
+      .then(async (result) => {
+        if (!result.success) throw new Error(result.message);
+        setProfile(result.data);
+        if (result.data.role === 'ADMIN') {
+          const accountResult = await getUsers();
+          if (accountResult.success) setUsers(accountResult.data || []);
+        }
       })
-      .catch(() => setError('Không thể kết nối đến máy chủ.'))
+      .catch(() => setError('Không thể tải dữ liệu quản trị. Vui lòng kiểm tra kết nối và thử lại.'))
       .finally(() => setLoading(false));
   }, []);
 
-  const logout = () => {
-    clearAuth();
-    navigate('/login', { replace: true });
-  };
-
-  const name = profile?.fullName || storedName || storedUsername;
   const role = profile?.role || storedRole;
+  const activeUsers = users.filter((user) => user.active).length;
+  const inactiveUsers = users.length - activeUsers;
+  const managedUsers = users.filter((user) => user.role !== 'ADMIN').length;
+  const roleStats = useMemo(() => roleOrder.map((item) => ({
+    role: item,
+    label: roleLabels[item],
+    count: users.filter((user) => user.role === item).length,
+  })), [users]);
 
-  if (loading) return <main className="dashboard-state"><span className="dashboard-spinner" /><p>Đang tải workspace…</p></main>;
+  const metrics = [
+    { label: 'Tổng tài khoản', value: users.length, note: 'Tất cả tài khoản trong hệ thống', icon: Users, tone: 'blue' },
+    { label: 'Đang hoạt động', value: activeUsers, note: 'Có thể đăng nhập và sử dụng COSRE', icon: UserCheck, tone: 'violet' },
+    { label: 'Đã vô hiệu hóa', value: inactiveUsers, note: 'Không thể đăng nhập hệ thống', icon: UserMinus, tone: 'red' },
+    { label: 'Tài khoản được quản lý', value: managedUsers, note: 'Head Department, Staff, Lecturer, Student', icon: ShieldCheck, tone: 'green' },
+  ];
+
+  if (role && role !== 'ADMIN') {
+    return <main className="dashboard-state"><p>Dashboard dành cho vai trò {roleLabels[role] || role} đang được phát triển.</p></main>;
+  }
 
   return (
-    <main className="dashboard-page">
-      <aside className="dashboard-sidebar">
-        <div className="dashboard-brand"><span><Layers3 size={21} /></span><div><strong>CollabSphere</strong><small>COSRE</small></div></div>
-        <nav>
-          <button className="active"><FolderKanban size={18} /> Tổng quan</button>
-          {role === 'ADMIN' && <button onClick={() => navigate('/admin/users')}><Users size={18} /> Quản lý người dùng</button>}
-          <button><GraduationCap size={18} /> Không gian học tập</button>
-          <button><ShieldCheck size={18} /> Bảo mật tài khoản</button>
-        </nav>
-        <button className="sidebar-logout" onClick={logout}><LogOut size={17} /> Đăng xuất</button>
-      </aside>
-
-      <section className="dashboard-main">
-        <header className="dashboard-topbar">
-          <div><span>Workspace</span><ChevronRight size={13} /><strong>Dashboard</strong></div>
-          <div className="dashboard-account"><button aria-label="Thông báo"><Bell size={18} /></button><span><CircleUserRound size={20} /></span><div><strong>{name}</strong><small>{role}</small></div></div>
-        </header>
-
-        <div className="dashboard-content">
-          {error && <div className="dashboard-error">{error}</div>}
-          <div className="welcome-card">
-            <div><span className="welcome-kicker">COSRE WORKSPACE</span><h1>Chào mừng trở lại, {name}</h1><p>Bạn đã đăng nhập thành công bằng tài khoản <strong>{role}</strong>. Theo dõi hoạt động và truy cập nhanh các chức năng của hệ thống tại đây.</p></div>
-            <div className="welcome-art"><Layers3 size={66} /></div>
-          </div>
-
-          <div className="dashboard-grid">
-            <article><span className="metric-icon blue"><Users size={20} /></span><div><small>Vai trò hiện tại</small><strong>{role}</strong><p>Quyền truy cập đã được xác thực</p></div></article>
-            <article><span className="metric-icon green"><ShieldCheck size={20} /></span><div><small>Trạng thái tài khoản</small><strong>Đang hoạt động</strong><p>JWT authentication active</p></div></article>
-            <article><span className="metric-icon violet"><FolderKanban size={20} /></span><div><small>Workspace</small><strong>Sẵn sàng</strong><p>Các module tiếp theo đang phát triển</p></div></article>
-          </div>
-
-          {role === 'ADMIN' && (
-            <section className="admin-action">
-              <div><span><ShieldCheck size={20} /></span><div><h2>Admin Control Center</h2><p>Tạo, cập nhật, khóa và quản lý tài khoản trong hệ thống COSRE.</p></div></div>
-              <button onClick={() => navigate('/admin/users')}>Mở quản lý người dùng <ChevronRight size={16} /></button>
-            </section>
-          )}
-        </div>
+    <AdminLayout activeTab="overview" title="Admin Dashboard">
+      <section className="admin-overview-heading">
+        <div><span>COSRE SYSTEM</span><h2>Tổng quan hệ thống</h2><p>Theo dõi tài khoản và trạng thái vận hành của nền tảng CollabSphere.</p></div>
+        <div className="admin-health"><i /><span><strong>System operational</strong><small>JWT authentication active</small></span></div>
       </section>
-    </main>
+
+      {error && <div className="dashboard-error">{error}</div>}
+
+      <section className="admin-metric-grid" aria-label="Thống kê tài khoản">
+        {metrics.map(({ label, value, note, icon: Icon, tone }) => (
+          <article className={`admin-metric-card admin-metric-card--${tone}`} key={label}>
+            <div className="admin-metric-icon"><Icon size={20} /></div>
+            <Activity size={14} className="admin-metric-trend" />
+            <strong>{loading ? '—' : value}</strong>
+            <h3>{label}</h3>
+            <p>{note}</p>
+          </article>
+        ))}
+      </section>
+
+      <section className="admin-dashboard-grid">
+        <article className="admin-panel role-distribution">
+          <header><div><h3>Phân bổ tài khoản theo vai trò</h3><p>Dữ liệu đồng bộ trực tiếp từ Account API</p></div></header>
+          <div className="role-stat-list">
+            {roleStats.map((item) => {
+              const percent = users.length ? Math.round((item.count / users.length) * 100) : 0;
+              return (
+                <div className="role-stat" key={item.role}>
+                  <div><strong>{item.label}</strong><span>{item.count} tài khoản</span></div>
+                  <div className="role-stat-track"><i style={{ width: `${percent}%` }} /></div>
+                  <b>{percent}%</b>
+                </div>
+              );
+            })}
+          </div>
+        </article>
+
+      </section>
+    </AdminLayout>
   );
 }
 

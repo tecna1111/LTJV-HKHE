@@ -3,6 +3,7 @@ import LoginPage from '../modules/authentication/pages/LoginPage';
 import UserManagementPage from '../modules/account/pages/UserManagementPage';
 import ProtectedRoute from './ProtectedRoute';
 import DashboardPage from '../modules/dashboard/pages/DashboardPage';
+import SystemReportsPage from '../modules/report/pages/SystemReportsPage';
 
 function AppRoutes() {
   return (
@@ -16,6 +17,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRole="ADMIN">
               <UserManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <ProtectedRoute requiredRole="ADMIN">
+              <SystemReportsPage />
             </ProtectedRoute>
           }
         />
