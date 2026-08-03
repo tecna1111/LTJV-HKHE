@@ -7,7 +7,6 @@ import {
   Eye,
   EyeOff,
   KanbanSquare,
-  Layers3,
   LockKeyhole,
   Mail,
   MessageCircle,
@@ -17,6 +16,7 @@ import {
   Wifi,
   X,
 } from 'lucide-react';
+import BrandLogo from '../../../components/BrandLogo';
 import useAuthStore from '../../../store/useAuthStore';
 import { getApiError } from '../../../config/axios';
 import { login } from '../authService';
@@ -36,14 +36,6 @@ const features = [
   { icon: Sparkles, tone: 'green', title: 'AI-Powered Milestone Assistant', text: 'Smart planning with COSRE AI accelerating project delivery.' },
   { icon: BarChart3, tone: 'blue', title: 'Peer Review & Rubric Evaluation', text: 'Structured assessment with transparent analytics and feedback.' },
 ];
-
-function GoogleIcon() {
-  return <span className="sso-letter google-letter" aria-hidden="true">G</span>;
-}
-
-function MicrosoftIcon() {
-  return <span className="microsoft-mark" aria-hidden="true"><i /><i /><i /><i /></span>;
-}
 
 function LoginPage() {
   const [activeRole, setActiveRole] = useState('STUDENT');
@@ -86,8 +78,7 @@ function LoginPage() {
         <aside className="brand-panel">
           <div className="brand-grid" />
           <header className="brand-header">
-            <div className="brand-logo"><Layers3 size={22} /></div>
-            <div className="brand-name"><strong>CollabSphere</strong><span>COSRE</span></div>
+            <BrandLogo inverse />
             <span className="version-pill">PBL Platform v2.4</span>
           </header>
 
@@ -110,7 +101,7 @@ function LoginPage() {
 
         <section className="login-panel">
           <div className="login-content">
-            <div className="mobile-brand"><span><Layers3 size={18} /></span><strong>CollabSphere</strong></div>
+            <div className="mobile-brand"><BrandLogo compact /></div>
 
             <div className="role-section">
               <span className="eyebrow">Select role context</span>
@@ -180,11 +171,6 @@ function LoginPage() {
               </button>
             </form>
 
-            <div className="divider"><span>Or continue with University SSO</span></div>
-            <div className="sso-grid">
-              <button type="button" disabled title="SSO chưa được kết nối"><GoogleIcon />Google Workspace</button>
-              <button type="button" disabled title="SSO chưa được kết nối"><MicrosoftIcon />Microsoft 365</button>
-            </div>
           </div>
 
           <footer className="access-notice"><ShieldCheck size={14} /><span><strong>Access restricted</strong> to authorized university accounts. Accounts are imported and managed by Staff.</span></footer>
