@@ -23,14 +23,16 @@ public class AuthService {
         this.jwtConfig = jwtConfig;
     }
 
-    public Optional<LoginResponse> login(String username, String password) {
+    public Optional<LoginResponse> login(String username, String password, RoleEnum selectedRole) {
         Optional<User> userOpt = userRepository.findByUsername(username);
         if (userOpt.isEmpty()) {
             return Optional.empty();
         }
 
         User user = userOpt.get();
-        if (!user.isActive() || !passwordEncoder.matches(password, user.getPassword())) {
+        if (!user.isActive()
+                || user.getRole() != selectedRole
+                || !passwordEncoder.matches(password, user.getPassword())) {
             return Optional.empty();
         }
 
