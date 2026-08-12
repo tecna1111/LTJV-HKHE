@@ -1,126 +1,187 @@
-Markdown
-# 🌐 CollabSphere (COSRE)
-**Hệ thống hỗ trợ việc học theo phương pháp học tập dựa trên dự án (Project-Based Learning)**
+# CollabSphere (COSRE)
 
-![Java](https://img.shields.io/badge/Java-21%2B-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
-![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2%2B-6DB33F?style=for-the-badge&logo=spring&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-8.0%2B-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
-![Status](https://img.shields.io/badge/Status-Active_Development-yellow?style=for-the-badge)
+COSRE là nền tảng hỗ trợ học tập theo dự án (Project-Based Learning), được xây dựng với Spring Boot và React. Phiên bản hiện tại cung cấp luồng đăng nhập JWT, phân quyền, Dashboard và quản lý tài khoản dành cho Admin.
 
-## ✨ Tính Năng Nổi Bật
+## Chức năng hiện có
 
-### Dành cho Quản lý & Học thuật
-- **Quản lý toàn diện:** Tự động hóa tạo tài khoản, lớp học, môn học qua file nhập (Import).
-- **Quản lý dự án đa cấp:** Từ Trưởng bộ môn (phê duyệt) đến Giảng viên (tạo, phân công, giám sát).
-- **Hệ thống đánh giá đa chiều:** Giảng viên đánh giá nhóm/cá nhân, sinh viên đánh giá chéo (peer-review) theo từng mốc dự án.
+- Đăng nhập bằng username và password.
+- Xác thực stateless bằng JSON Web Token (JWT).
+- Phân quyền theo vai trò.
+- Tự động tạo tài khoản Admin trong môi trường development.
+- Dashboard được bảo vệ và xác minh lại phiên đăng nhập qua API `/auth/me`.
+- Admin tạo, cập nhật, khóa/mở khóa và xóa tài khoản.
+- Giao diện đăng nhập và Dashboard responsive.
+- Hỗ trợ H2 cho development và MySQL cho môi trường tích hợp.
 
-### Cộng tác Thời gian thực
-- **Workspace Tích hợp:** Quản lý task, Kanban board, thẻ và nhiệm vụ phụ trong từng Sprint.
-- **Giao tiếp Trực tiếp:** Chat nhóm thời gian thực, họp Video/Audio chất lượng cao có chia sẻ màn hình.
-- **Công cụ Sáng tạo:** Bảng trắng (Whiteboard) và trình soạn thảo văn bản đồng bộ thời gian thực cho nhiều người dùng.
+## Vai trò người dùng
 
-### Tích hợp AI Trợ lý
-- **Tự động hóa:** Tạo thông tin dự án, mục tiêu và mốc thời gian tự động.
-- **Chatbot thông minh:** Hỗ trợ sinh viên động não ý tưởng, giải quyết vấn đề.
-- **Phân tích dữ liệu:** Đưa ra tư vấn và đề xuất cho Giảng viên dựa trên mức độ đóng góp và tiến độ của sinh viên.
+| Vai trò | Mã role | Quyền hiện tại |
+|---|---|---|
+| Quản trị viên | `ADMIN` | Dashboard và quản lý tài khoản |
+| Trưởng bộ môn | `HEAD_DEPT` | Dashboard cơ bản |
+| Nhân viên | `STAFF` | Dashboard cơ bản |
+| Giảng viên | `LECTURER` | Dashboard cơ bản |
+| Sinh viên | `STUDENT` | Dashboard cơ bản |
 
----
+## Công nghệ
 
-## 👥 Vai Trò Người Dùng
+### Backend
 
-| Vai trò | Phân quyền chính |
-|---|---|
-| **Quản trị viên** | Quản lý toàn bộ tài khoản hệ thống, xử lý báo cáo, theo dõi Dashboard. |
-| **Nhân viên** | Import dữ liệu môn học, lớp học, tài khoản; phân công giảng viên & sinh viên. |
-| **Trưởng bộ môn** | Duyệt/Từ chối dự án, phân bổ kho dự án chuẩn cho các lớp. |
-| **Giảng viên** | Tạo dự án, quản lý nhóm, theo dõi tiến độ, chấm điểm, đánh giá và hỗ trợ sinh viên. |
-| **Sinh viên** | Quản lý task, nộp bài, cộng tác thời gian thực, đánh giá chéo và sử dụng AI hỗ trợ. |
+- Java 17
+- Spring Boot 4.1
+- Spring Web MVC
+- Spring Security
+- Spring Data JPA
+- Jakarta Validation
+- JWT (`jjwt` 0.11.5)
+- H2 / MySQL
+- Maven
 
----
+### Frontend
 
-## 📂 Cấu Trúc Dự Án
+- React 19
+- Vite 8
+- React Router
+- Zustand
+- Axios
+- Lucide React
+- ESLint
+
+## Cấu trúc project
 
 ```text
 LTJV-HKHE/
-├── docs/                                  # Tài liệu thiết kế, báo cáo, sơ đồ UML (Tuần 1)
-│
-├── Cosre_Backend/                         # Spring Boot Application
-│   ├── mvnw
-│   ├── mvnw.cmd
-│   ├── pom.xml
-│   └── src/main/
-│       ├── java/collabsphere/
-│       │   ├── CollabSphereApplication.java
-│       │   ├── config/                    # Security, WebSocket, Async Config
-│       │   ├── controller/                # REST API Controllers
-│       │   ├── dto/                       # Request & Response DTOs
-│       │   ├── entity/                    # Database Entities (JPA / Hibernate)
-│       │   ├── enums/                     # Status & Role Enums
-│       │   ├── exception/                 # Global Exception Handling
-│       │   ├── repository/                # JPA Repositories
-│       │   ├── security/                  # JWT Authentication
-│       │   ├── service/                   # Business Logic & AI
-│       │   └── websocket/                 # Real-time Event Handlers
-│       └── resources/                     # application.yml, Email Templates
-│
-├── Cosre_Frontend/                        # React + Vite Application
-│   ├── eslint.config.js
-│   ├── index.html
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── public/
-│   └── src/
-│       ├── App.jsx                        # Router & Main Routes
-│       ├── main.jsx                       # Entry Point
-│       ├── api/                           # Axios Services
-│       ├── assets/                        # Static Images & Icons
-│       ├── components/                    # Reusable UI & Widgets
-│       ├── context/                       # React Contexts (Auth, Socket, Workspace)
-│       ├── hooks/                         # Custom Hooks
-│       ├── pages/                         # Pages grouped by Roles
-│       └── utils/                         # Helper functions & constants
-│
-├── .gitignore
-└── README.md
+|-- cosre-backend/          Spring Boot REST API
+|   `-- src/main/
+|       |-- java/com/cosre/cosre_backend/
+|       |   |-- common/     Response, constants và exception dùng chung
+|       |   |-- config/     Security, JWT, CORS và seed dữ liệu
+|       |   `-- modules/    Các module nghiệp vụ
+|       `-- resources/      Cấu hình theo Spring profile
+|-- cosre-frontend/         React + Vite SPA
+|   `-- src/
+|       |-- config/         Axios và cấu hình API
+|       |-- routes/         Router và route bảo vệ
+|       |-- store/          Trạng thái đăng nhập
+|       `-- modules/        Authentication, Dashboard, Account
+|-- docs/                   Tài liệu kỹ thuật
+`-- CONTRIBUTING.md         Hướng dẫn chạy và đóng góp
+```
 
+## Chạy nhanh trên Windows
 
-⚙️ Hướng Dẫn Cài Đặt & Chạy Dự Án
-Backend (Spring Boot)
-Bash
-# 1. Clone dự án về máy
-git clone [https://github.com/tecna1111/LTJV-HKHE](https://github.com/tecna1111/LTJV-HKHE)
-cd LTJV-HKHE/Cosre_Backend
+### 1. Chạy Backend
 
-# 2. Cấu hình Database
-# Mở file src/main/resources/application.yml và cập nhật thông tin MySQL
+Mở PowerShell thứ nhất:
 
-# 3. Build và Chạy ứng dụng
-mvn clean install
+```powershell
+cd D:\JAVA\LTJV-HKHE\cosre-backend
+.\mvnw.cmd spring-boot:run
+```
+
+Nếu Maven Wrapper không chạy:
+
+```powershell
 mvn spring-boot:run
+```
 
-Frontend (React + Vite)
+### 2. Chạy Frontend
 
-Bash
-# 1. Chuyển sang thư mục Frontend
-cd LTJV-HKHE/Cosre_Frontend
+Mở PowerShell thứ hai:
 
-# 2. Cài đặt các thư viện phụ thuộc
-npm install
+```powershell
+cd D:\JAVA\LTJV-HKHE\cosre-frontend
+npm.cmd install
+npm.cmd run dev
+```
 
-# 3. Chạy môi trường Development
-npm run dev
+Truy cập URL được Vite hiển thị, thông thường là:
 
-📌 Quy Tắc Viết Commit Message (Conventional Commits)
-Plaintext
-<type>(<scope>): <mô tả ngắn gọn>
-feat: Thêm tính năng mới (vd: feat(auth): thêm API đăng nhập JWT)
+```text
+http://localhost:5173/login
+```
 
-fix: Sửa lỗi (vd: fix(chat): sửa lỗi mất kết nối websocket)
+Nếu port `5173` đang được sử dụng, Vite có thể tự chuyển sang `5174`, `5175`,... Backend development đã cho phép các port localhost này.
 
-docs: Tài liệu/README (vd: docs(srs): cập nhật sơ đồ Use Case)
+## Tài khoản development
 
-style: Định dạng CSS/UI (vd: style(sidebar): chỉnh lại padding)
+Profile mặc định `dev` tự động tạo tài khoản:
 
-refactor: Tối ưu hóa code (vd: refactor(service): tối ưu truy vấn JPA)
+```text
+Vai trò:  ADMIN
+Username: admin
+Password: Admin@123
+```
 
-chore: Cấu hình/Thư viện (vd: chore: cài đặt thư viện TailwindCSS)
+Chỉ sử dụng tài khoản này khi phát triển trên máy local.
+
+## Địa chỉ dịch vụ
+
+| Dịch vụ | URL |
+|---|---|
+| Frontend | `http://localhost:5173` hoặc port Vite hiển thị |
+| Backend | `http://localhost:8080` |
+| API Login | `POST http://localhost:8080/api/v1/auth/login` |
+| API người dùng hiện tại | `GET http://localhost:8080/api/v1/auth/me` |
+| H2 Console | `http://localhost:8080/h2-console` |
+
+## Luồng đăng nhập
+
+```text
+Login Page
+   -> POST /api/v1/auth/login
+   -> Backend kiểm tra tài khoản và BCrypt password
+   -> Trả JWT, username, fullName và role
+   -> Frontend lưu phiên đăng nhập
+   -> Điều hướng /dashboard
+   -> GET /api/v1/auth/me để xác minh JWT
+```
+
+- Đăng nhập thành công trả HTTP `200`.
+- Sai username/password hoặc tài khoản bị khóa trả HTTP `401`.
+- API được bảo vệ yêu cầu header `Authorization: Bearer <token>`.
+- Chọn “Remember me” lưu phiên trong `localStorage`; bỏ chọn sử dụng `sessionStorage`.
+
+## Kiểm tra source
+
+Backend:
+
+```powershell
+cd cosre-backend
+.\mvnw.cmd test
+```
+
+Frontend:
+
+```powershell
+cd cosre-frontend
+npm.cmd run lint
+npm.cmd run build
+```
+
+## Cấu hình MySQL
+
+Xem hướng dẫn đầy đủ trong [CONTRIBUTING.md](CONTRIBUTING.md#chạy-backend-với-mysql).
+
+Các biến môi trường chính:
+
+```text
+SPRING_PROFILES_ACTIVE=mysql
+DB_URL=jdbc:mysql://localhost:3306/cosre?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+DB_USERNAME=root
+DB_PASSWORD=your_password
+JWT_SECRET=your-secure-secret-at-least-32-characters
+CORS_ALLOWED_ORIGIN_PATTERNS=http://localhost:5173
+```
+
+Không commit password, JWT secret hoặc file `.env` lên Git.
+
+## Tài liệu
+
+- [Hướng dẫn chạy và đóng góp](CONTRIBUTING.md)
+- [Tổng quan module](docs/module-overview.md)
+- [Cấu trúc chuẩn hóa](docs/standardized-structure.md)
+
+## Trạng thái
+
+Dự án đang trong giai đoạn phát triển. Các module quản lý dự án, lớp học, Kanban, đánh giá, cộng tác thời gian thực và AI sẽ được bổ sung ở các giai đoạn tiếp theo.
