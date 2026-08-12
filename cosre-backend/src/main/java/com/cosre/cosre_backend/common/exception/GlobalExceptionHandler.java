@@ -25,6 +25,12 @@ public class GlobalExceptionHandler {
                 .body(new ApiResponse<>(false, exception.getMessage(), null));
     }
 
+    @ExceptionHandler(BusinessRuleException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBusinessRule(BusinessRuleException exception) {
+        return ResponseEntity.badRequest()
+                .body(new ApiResponse<>(false, exception.getMessage(), null));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleValidation(MethodArgumentNotValidException exception) {
         Map<String, String> errors = new LinkedHashMap<>();
