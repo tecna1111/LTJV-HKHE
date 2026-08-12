@@ -31,7 +31,16 @@ public class GlobalExceptionHandler {
                 .body(new ApiResponse<>(false, exception.getMessage(), null));
     }
 
+<<<<<<< HEAD
     // Chuyển lỗi validation của bean thành map dễ đọc cho client.
+=======
+    @ExceptionHandler(BusinessRuleException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBusinessRule(BusinessRuleException exception) {
+        return ResponseEntity.badRequest()
+                .body(new ApiResponse<>(false, exception.getMessage(), null));
+    }
+
+>>>>>>> 7bfbff58bff3de4e5dbe3ee5caffbbad75335d9a
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleValidation(MethodArgumentNotValidException exception) {
         Map<String, String> errors = new LinkedHashMap<>();

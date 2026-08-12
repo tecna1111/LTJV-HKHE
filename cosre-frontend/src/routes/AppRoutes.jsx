@@ -4,6 +4,7 @@ import UserManagementPage from '../modules/account/pages/UserManagementPage';
 import ProtectedRoute from './ProtectedRoute';
 import DashboardPage from '../modules/dashboard/pages/DashboardPage';
 import SystemReportsPage from '../modules/report/pages/SystemReportsPage';
+import TeamManagementPage from '../modules/team/pages/TeamManagementPage';
 
 function AppRoutes() {
   return (
@@ -12,6 +13,14 @@ function AppRoutes() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route
+          path="/teams"
+          element={
+            <ProtectedRoute requiredRole="LECTURER">
+              <TeamManagementPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/admin/users"
           element={
