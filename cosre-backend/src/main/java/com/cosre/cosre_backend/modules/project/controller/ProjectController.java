@@ -3,6 +3,7 @@ package com.cosre.cosre_backend.modules.project.controller;
 import com.cosre.cosre_backend.common.dto.ApiResponse;
 import com.cosre.cosre_backend.modules.project.dto.CreateProjectRequest;
 import com.cosre.cosre_backend.modules.project.dto.ProjectResponse;
+import com.cosre.cosre_backend.modules.project.dto.UpdateProjectRequest;
 import com.cosre.cosre_backend.modules.project.service.ProjectService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -55,6 +56,27 @@ public class ProjectController {
         );
     }
 
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('LECTURER')")
+    public ApiResponse<ProjectResponse> getById(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        return new ApiResponse<>(true, "Project loaded",
+                projectService.getById(id, authentication.getName()));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('LECTURER')")
+    public ApiResponse<ProjectResponse> update(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateProjectRequest request,
+            Authentication authentication
+    ) {
+        return new ApiResponse<>(true, "Project updated",
+                projectService.update(id, request, authentication.getName()));
+    }
+
     @PostMapping("/{id}/submit")
     @PreAuthorize("hasRole('LECTURER')")
     public ApiResponse<ProjectResponse> submit(
@@ -69,5 +91,15 @@ public class ProjectController {
                         authentication.getName()
                 )
         );
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('LECTURER')")
+    public ApiResponse<Void> delete(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        projectService.delete(id, authentication.getName());
+        return new ApiResponse<>(true, "Project deleted", null);
     }
 }

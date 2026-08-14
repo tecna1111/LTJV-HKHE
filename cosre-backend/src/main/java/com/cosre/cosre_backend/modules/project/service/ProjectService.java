@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.ArrayList;
 
 @Service
 @Transactional
@@ -58,25 +59,8 @@ public class ProjectService {
         project.setCreatedBy(lecturer.getId());
         project.setStatus(ProjectStatus.DRAFT);
 
-        project.setObjectives(
-                request.objectives()
-                        .stream()
-                        .map(String::trim)
-                        .distinct()
-                        .toList()
-        );
-
-        for (int index = 0; index < request.milestones().size(); index++) {
-            MilestoneRequest item = request.milestones().get(index);
-
-            ProjectMilestone milestone = new ProjectMilestone();
-            milestone.setTitle(item.title().trim());
-            milestone.setDescription(clean(item.description()));
-            milestone.setDueOffsetDays(item.dueOffsetDays());
-            milestone.setDisplayOrder(index);
-
-            project.addMilestone(milestone);
-        }
+        project.setObjectives(cleanObjectives(request.objectives()));
+        replaceMilestones(project, request.milestones());
 
         Project savedProject = projectRepository.save(project);
 
@@ -92,6 +76,37 @@ public class ProjectService {
                 .stream()
                 .map(ProjectResponse::from)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ProjectResponse getById(Long projectId, String username) {
+        return ProjectResponse.from(requireOwnedProject(projectId, username));
+    }
+
+    public ProjectResponse update(
+            Long projectId,
+            UpdateProjectRequest request,
+            String username
+    ) {
+        Project project = requireOwnedDraft(projectId, username);
+
+        if (!subjectRepository.existsById(request.subjectId())) {
+            throw new ResourceNotFoundException("Subject not found");
+        }
+
+        String title = request.title().trim();
+        if (projectRepository.existsBySubjectIdAndTitleIgnoreCaseAndIdNot(
+                request.subjectId(), title, projectId)) {
+            throw new BusinessRuleException("Project title already exists in this subject");
+        }
+
+        project.setTitle(title);
+        project.setDescription(clean(request.description()));
+        project.setSubjectId(request.subjectId());
+        project.setObjectives(cleanObjectives(request.objectives()));
+        replaceMilestones(project, request.milestones());
+
+        return ProjectResponse.from(project);
     }
 
     public ProjectResponse submit(
@@ -121,6 +136,18 @@ public class ProjectService {
         project.setStatus(ProjectStatus.PENDING);
 
         return ProjectResponse.from(project);
+    }
+
+    public void delete(Long projectId, String username) {
+        projectRepository.delete(requireOwnedDraft(projectId, username));
+    }
+
+    private Project requireOwnedDraft(Long projectId, String username) {
+        Project project = requireOwnedProject(projectId, username);
+        if (project.getStatus() != ProjectStatus.DRAFT) {
+            throw new BusinessRuleException("Only draft projects can be changed");
+        }
+        return project;
     }
 
     private Project requireOwnedProject(
@@ -159,5 +186,22 @@ public class ProjectService {
         return value == null || value.isBlank()
                 ? null
                 : value.trim();
+    }
+
+    private List<String> cleanObjectives(List<String> objectives) {
+        return new ArrayList<>(objectives.stream().map(String::trim).distinct().toList());
+    }
+
+    private void replaceMilestones(Project project, List<MilestoneRequest> requests) {
+        project.clearMilestones();
+        for (int index = 0; index < requests.size(); index++) {
+            MilestoneRequest item = requests.get(index);
+            ProjectMilestone milestone = new ProjectMilestone();
+            milestone.setTitle(item.title().trim());
+            milestone.setDescription(clean(item.description()));
+            milestone.setDueOffsetDays(item.dueOffsetDays());
+            milestone.setDisplayOrder(index);
+            project.addMilestone(milestone);
+        }
     }
 }

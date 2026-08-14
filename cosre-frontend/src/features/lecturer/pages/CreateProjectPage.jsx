@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import ObjectiveListEditor from "../components/ObjectiveListEditor";
 import MilestoneEditor from "../components/MilestoneEditor";
 import {
@@ -42,7 +42,6 @@ export default function CreateProjectPage() {
   // Khi chọn môn học, tải đề cương tương ứng để dùng cho AI sinh mốc
   useEffect(() => {
     if (!selectedSubjectId) {
-      setSyllabus(null);
       return;
     }
     fetchSyllabus(selectedSubjectId)
@@ -74,7 +73,7 @@ export default function CreateProjectPage() {
         objectives: cleanObjectives,
       });
       setMilestones(suggested);
-    } catch (err) {
+    } catch {
       setAiError("AI không tạo được mốc lúc này. Vui lòng thử lại hoặc thêm mốc thủ công.");
     } finally {
       setAiLoading(false);
@@ -109,7 +108,7 @@ export default function CreateProjectPage() {
     try {
       const project = await createProject(buildPayload());
       setSavedProject(project);
-    } catch (err) {
+    } catch {
       setSaveError("Lưu dự án thất bại. Vui lòng kiểm tra lại thông tin và thử lại.");
     } finally {
       setSaving(false);
@@ -131,7 +130,7 @@ export default function CreateProjectPage() {
       }
       const submitted = await submitProjectForApproval(project.id);
       setSavedProject(submitted);
-    } catch (err) {
+    } catch {
       setSaveError("Gửi duyệt thất bại. Vui lòng thử lại.");
     } finally {
       setSaving(false);
@@ -159,7 +158,10 @@ export default function CreateProjectPage() {
         <select
           className="subject-select"
           value={selectedSubjectId}
-          onChange={(e) => setSelectedSubjectId(e.target.value)}
+          onChange={(e) => {
+            setSyllabus(null);
+            setSelectedSubjectId(e.target.value);
+          }}
         >
           <option value="">-- Chọn môn học --</option>
           {subjects.map((s) => (
