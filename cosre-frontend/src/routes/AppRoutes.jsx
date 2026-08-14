@@ -6,6 +6,10 @@ import DashboardPage from '../modules/dashboard/pages/DashboardPage';
 import SystemReportsPage from '../modules/report/pages/SystemReportsPage';
 import TeamManagementPage from '../modules/team/pages/TeamManagementPage';
 import CreateProjectPage from '../features/lecturer/pages/CreateProjectPage';
+import AccountImportPage from '../modules/account/pages/AccountImportPage';
+import SubjectListPage from '../modules/subject/pages/SubjectListPage';
+import ClassroomListPage from '../modules/classroom/pages/ClassroomListPage';
+import ClassroomDetailPage from '../modules/classroom/pages/ClassroomDetailPage';
 
 function AppRoutes() {
   return (
@@ -27,6 +31,26 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRole="LECTURER">
               <TeamManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/subjects"
+          element={<ProtectedRoute requiredRole="STAFF"><SubjectListPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/staff/classrooms"
+          element={<ProtectedRoute requiredRole="STAFF"><ClassroomListPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/staff/classrooms/:id"
+          element={<ProtectedRoute requiredRole="STAFF"><ClassroomDetailPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/staff/accounts/import"
+          element={
+            <ProtectedRoute requiredRole="STAFF">
+              <AccountImportPage />
             </ProtectedRoute>
           }
         />
