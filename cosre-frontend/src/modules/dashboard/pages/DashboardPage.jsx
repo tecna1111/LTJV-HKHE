@@ -26,15 +26,15 @@ const ROLE_NAV = {
     ['Tổng quan', LayoutDashboard], ['Tài khoản', Users, '/admin/users'], ['Báo cáo sự cố', CircleAlert, '/admin/reports'],
   ],
   HEAD_DEPT: [
-    ['Tổng quan', LayoutDashboard], ['Dự án chờ duyệt', ClipboardCheck], ['Dự án đã duyệt', FolderKanban],
+    ['Tổng quan', LayoutDashboard], ['Dự án chờ duyệt', ClipboardCheck, '/workflow'], ['Dự án đã duyệt', FolderKanban, '/workflow'],
     ['Lớp học', BookOpen], ['Phân công dự án', Users], ['Báo cáo', BarChart3],
   ],
   STAFF: [
-    ['Tổng quan', LayoutDashboard, '/dashboard'], ['Môn học & đề cương', BookOpen, '/staff/subjects'],
+    ['Tổng quan', LayoutDashboard, '/dashboard'], ['Môn học', BookOpen, '/staff/subjects'], ['Đề cương', FileUp, '/workflow'],
     ['Lớp học & thành viên', Building2, '/staff/classrooms'], ['Tài khoản', Users, '/staff/accounts/import'],
   ],
   LECTURER: [
-    ['Tổng quan', LayoutDashboard], ['Lớp học', BookOpen], ['Dự án', FolderKanban], ['Nhóm sinh viên', Users],
+    ['Tổng quan', LayoutDashboard], ['Lớp học', BookOpen], ['Dự án', FolderKanban, '/workflow'], ['Tạo dự án', Sparkles, '/lecturer/projects/new'], ['Nhóm sinh viên', Users, '/teams'],
     ['Đánh giá', ClipboardCheck], ['Lịch họp', Video],
   ],
   STUDENT: [

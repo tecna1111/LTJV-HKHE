@@ -4,6 +4,7 @@ import com.cosre.cosre_backend.common.dto.ApiResponse;
 import com.cosre.cosre_backend.modules.project.dto.CreateProjectRequest;
 import com.cosre.cosre_backend.modules.project.dto.ProjectResponse;
 import com.cosre.cosre_backend.modules.project.dto.UpdateProjectRequest;
+import com.cosre.cosre_backend.modules.project.dto.ReviewProjectRequest;
 import com.cosre.cosre_backend.modules.project.service.ProjectService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -101,5 +102,37 @@ public class ProjectController {
     ) {
         projectService.delete(id, authentication.getName());
         return new ApiResponse<>(true, "Project deleted", null);
+    }
+
+    @GetMapping("/review")
+    @PreAuthorize("hasRole('HEAD_DEPT')")
+    public ApiResponse<List<ProjectResponse>> reviewQueue(@RequestParam(required = false) com.cosre.cosre_backend.modules.project.entity.ProjectStatus status) {
+        return new ApiResponse<>(true, "Projects loaded", projectService.listForReview(status));
+    }
+
+    @GetMapping("/approved")
+    @PreAuthorize("hasAnyRole('HEAD_DEPT','LECTURER','STAFF')")
+    public ApiResponse<List<ProjectResponse>> approved() {
+        return new ApiResponse<>(true, "Approved projects loaded", projectService.listForReview(com.cosre.cosre_backend.modules.project.entity.ProjectStatus.APPROVED));
+    }
+
+    @PutMapping("/{id}/review")
+    @PreAuthorize("hasRole('HEAD_DEPT')")
+    public ApiResponse<ProjectResponse> review(@PathVariable Long id, @Valid @RequestBody ReviewProjectRequest request, Authentication authentication) {
+        return new ApiResponse<>(true, request.approved() ? "Project approved" : "Project denied",
+                projectService.review(id, request.approved(), request.note(), authentication.getName()));
+    }
+
+    @PutMapping("/{id}/classrooms/{classroomId}")
+    @PreAuthorize("hasAnyRole('HEAD_DEPT','LECTURER')")
+    public ApiResponse<Void> assign(@PathVariable Long id, @PathVariable Long classroomId, Authentication authentication) {
+        projectService.assignToClassroom(id, classroomId, authentication.getName());
+        return new ApiResponse<>(true, "Project assigned to classroom", null);
+    }
+
+    @GetMapping("/classroom/{classroomId}")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<List<ProjectResponse>> classroomProjects(@PathVariable Long classroomId, Authentication authentication) {
+        return new ApiResponse<>(true, "Classroom projects loaded", projectService.listClassroomProjects(classroomId, authentication.getName()));
     }
 }

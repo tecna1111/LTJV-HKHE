@@ -26,7 +26,14 @@ public record CreateProjectRequest(
         > objectives,
 
         @NotEmpty(message = "Project must contain at least one milestone")
-        List<@Valid MilestoneRequest> milestones
+        List<@Valid MilestoneRequest> milestones,
+
+        @Positive(message = "Syllabus ID must be positive")
+        Long syllabusId
 
 ) {
+    public CreateProjectRequest(String title, String description, Long subjectId, List<String> objectives,
+            List<MilestoneRequest> milestones) {
+        this(title, description, subjectId, objectives, milestones, null);
+    }
 }

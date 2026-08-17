@@ -10,6 +10,8 @@ import AccountImportPage from '../modules/account/pages/AccountImportPage';
 import SubjectListPage from '../modules/subject/pages/SubjectListPage';
 import ClassroomListPage from '../modules/classroom/pages/ClassroomListPage';
 import ClassroomDetailPage from '../modules/classroom/pages/ClassroomDetailPage';
+import ProjectWorkflowPage from '../modules/workflow/pages/ProjectWorkflowPage';
+import TeamWorkspacePage from '../modules/team/pages/TeamWorkspacePage';
 
 function AppRoutes() {
   return (
@@ -18,6 +20,8 @@ function AppRoutes() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/workflow" element={<ProtectedRoute><ProjectWorkflowPage /></ProtectedRoute>} />
+        <Route path="/teams/:id/workspace" element={<ProtectedRoute><TeamWorkspacePage /></ProtectedRoute>} />
         <Route
           path="/lecturer/projects/new"
           element={
