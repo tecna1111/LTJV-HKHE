@@ -29,12 +29,24 @@ public class Project {
     @Column(name = "subject_id", nullable = false)
     private Long subjectId;
 
+    @Column(name = "syllabus_id")
+    private Long syllabusId;
+
     @Column(name = "created_by", nullable = false)
     private Long createdBy;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ProjectStatus status = ProjectStatus.DRAFT;
+
+    @Column(name = "reviewed_by")
+    private Long reviewedBy;
+
+    @Column(name = "review_note", length = 1000)
+    private String reviewNote;
+
+    @Column(name = "reviewed_at")
+    private LocalDateTime reviewedAt;
 
     @ElementCollection
     @CollectionTable(

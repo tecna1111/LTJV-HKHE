@@ -37,8 +37,10 @@ export async function fetchAssignedSubjects() {
 }
 
 export async function fetchSyllabus(subjectId) {
-  const { data } = await apiClient.get(`/subjects/${subjectId}`);
-  return { id: data.data.id, subjectId: data.data.id, objectives: [] };
+  const { data } = await apiClient.get('/syllabi', { params: { subjectId } });
+  const active = (data.data || []).find((item) => item.active);
+  if (!active) throw new Error('No active syllabus');
+  return active;
 }
 
 export async function generateMilestonesWithAI({ syllabusId, objectives }) {
@@ -53,6 +55,7 @@ export async function createProject(payload) {
   const { data } = await apiClient.post("/projects", {
     ...payload,
     subjectId: Number(payload.subjectId),
+    syllabusId: Number(payload.syllabusId),
   });
   return data.data;
 }

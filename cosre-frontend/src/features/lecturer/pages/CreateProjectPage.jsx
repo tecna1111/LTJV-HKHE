@@ -84,6 +84,7 @@ export default function CreateProjectPage() {
     title: title.trim(),
     description: description.trim(),
     subjectId: selectedSubjectId,
+    syllabusId: syllabus?.id,
     objectives: objectives.filter((o) => o.trim() !== ""),
     milestones,
   });

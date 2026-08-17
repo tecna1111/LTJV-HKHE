@@ -26,7 +26,9 @@ public record UpdateProjectRequest(
         > objectives,
 
         @NotEmpty
-        List<@Valid MilestoneRequest> milestones
+        List<@Valid MilestoneRequest> milestones,
+
+        @Positive Long syllabusId
 
 ) {
 }
