@@ -31,8 +31,8 @@ public class TeamController {
     public ApiResponse<TeamResponse> get(@PathVariable Long id, Authentication auth) { return ok("Team loaded", TeamResponse.from(service.get(id, auth.getName()))); }
     @GetMapping("/available-students")
     @PreAuthorize("hasRole('LECTURER')")
-    public ApiResponse<List<TeamResponse.Person>> students(@RequestParam Long classroomId) {
-        return ok("Students loaded", service.availableStudents(classroomId).stream().map(user -> new TeamResponse.Person(user.getId(), user.getUsername(), user.getFullName(), user.getEmail())).toList());
+    public ApiResponse<List<TeamResponse.Person>> students(@RequestParam Long classroomId, Authentication auth) {
+        return ok("Students loaded", service.availableStudents(classroomId, auth.getName()).stream().map(user -> new TeamResponse.Person(user.getId(), user.getUsername(), user.getFullName(), user.getEmail())).toList());
     }
     @PostMapping
     @PreAuthorize("hasRole('LECTURER')")
