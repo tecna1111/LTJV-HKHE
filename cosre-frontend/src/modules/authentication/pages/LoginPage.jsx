@@ -55,9 +55,13 @@ function LoginPage() {
     setSubmitting(true);
     setError('');
     try {
-      const result = await login({ username: username.trim(), password });
+      const result = await login({ username: username.trim(), password, role: activeRole });
       if (!result.success) {
         setError(result.message || 'Không thể đăng nhập.');
+        return;
+      }
+      if (result.data.role !== activeRole) {
+        setError('Tài khoản không thuộc vai trò đã chọn. Vui lòng chọn đúng vai trò để đăng nhập.');
         return;
       }
       setAuth(result.data.token, result.data.username, result.data.fullName, result.data.role, rememberMe);
