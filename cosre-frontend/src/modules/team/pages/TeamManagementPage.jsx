@@ -18,6 +18,7 @@ function TeamManagementPage() {
   const [projects, setProjects] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [showForm, setShowForm] = useState(false);
+  const [projectPicker, setProjectPicker] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState('');
@@ -87,10 +88,21 @@ function TeamManagementPage() {
     await run(`add-${team.id}`, () => addTeamMember(team.id, Number(raw)), 'Đã thêm thành viên.');
   };
   const chooseProject = async (team) => {
-    const available = await getClassroomProjects(team.classroomId);
-    const raw = window.prompt(`Chọn ID đề tài của lớp (${available.map((item) => `${item.id}: ${item.title}`).join(', ')}):`, team.projectId || '');
-    if (!raw) return;
-    await run(`project-${team.id}`, () => assignTeamProject(team.id, Number(raw)), 'Đã chọn đề tài cho nhóm.');
+    setBusy(`project-${team.id}`);
+    setFeedback({ type: '', text: '' });
+    try {
+      const available = await getClassroomProjects(team.classroomId);
+      setProjectPicker({ team, projects: available, projectId: team.projectId ? String(team.projectId) : '' });
+    } catch (error) {
+      setFeedback({ type: 'error', text: getApiError(error, 'Không thể tải đề tài của lớp.') });
+    } finally { setBusy(''); }
+  };
+  const submitProject = async (event) => {
+    event.preventDefault();
+    if (!projectPicker?.projectId) return;
+    const { team, projectId } = projectPicker;
+    setProjectPicker(null);
+    await run(`project-${team.id}`, () => assignTeamProject(team.id, Number(projectId)), 'Đã chọn đề tài cho nhóm.');
   };
 
   return (
@@ -111,7 +123,7 @@ function TeamManagementPage() {
               <div className="team-card-head"><span>LỚP #{team.classroomId}</span><button disabled={busy === `delete-${team.id}`} onClick={() => { if (window.confirm(`Xóa nhóm ${team.name}?`)) run(`delete-${team.id}`, () => deleteTeam(team.id), 'Đã xóa nhóm.'); }}><Trash2 size={16} /></button></div>
               <h2>{team.name}</h2><p>{team.description || 'Chưa có mô tả cho nhóm.'}</p>
               <button className="team-project" onClick={() => navigate(`/teams/${team.id}/workspace`)}><FolderKanban size={17} /> Mở workspace</button>
-              <button className={`team-project ${team.projectId ? 'selected' : ''}`} onClick={() => chooseProject(team)}><BookOpenCheck size={17} />{team.projectId ? `Đề tài #${team.projectId}` : 'Chọn đề tài'} </button>
+              <button disabled={busy === `project-${team.id}`} className={`team-project ${team.projectId ? 'selected' : ''}`} onClick={() => chooseProject(team)}><BookOpenCheck size={17} />{busy === `project-${team.id}` ? 'Đang tải đề tài…' : team.projectId ? `Đề tài #${team.projectId}` : 'Chọn đề tài'} </button>
               <div className="team-members-title"><strong>Thành viên ({team.members.length})</strong><button onClick={() => addMember(team)}><UserPlus size={15} /> Thêm</button></div>
               <div className="team-members">{team.members.map((member) => <div key={member.id}><span>{member.fullName.slice(0, 1).toUpperCase()}</span><div><strong>{member.fullName}</strong><small>@{member.username}</small></div>{team.leader?.id === member.id && <Crown size={15} className="leader" />}<button aria-label={`Xóa ${member.fullName}`} onClick={() => run(`remove-${team.id}-${member.id}`, () => removeTeamMember(team.id, member.id), 'Đã xóa thành viên.')}><X size={14} /></button></div>)}</div>
             </article>
@@ -126,6 +138,11 @@ function TeamManagementPage() {
         <fieldset><legend>Chọn thành viên khả dụng</legend>{!form.classroomId ? <p>Nhập ID lớp để tải sinh viên.</p> : students.length === 0 ? <p>Không có sinh viên khả dụng.</p> : <div className="student-picker">{students.map((student) => <label key={student.id}><input type="checkbox" checked={form.memberIds.includes(student.id)} onChange={() => toggleStudent(student.id)} /><span>{student.fullName}<small>@{student.username}</small></span></label>)}</div>}</fieldset>
         {form.memberIds.length > 0 && <label>Trưởng nhóm<select value={form.leaderId} onChange={(event) => update('leaderId', event.target.value)}><option value="">Chưa chỉ định</option>{students.filter((student) => form.memberIds.includes(student.id)).map((student) => <option value={student.id} key={student.id}>{student.fullName}</option>)}</select></label>}
         <div className="team-modal-actions"><button type="button" onClick={() => setShowForm(false)}>Hủy</button><button type="submit" className="team-primary" disabled={saving}>{saving ? 'Đang tạo…' : 'Tạo nhóm'}</button></div>
+      </form></div>}
+      {projectPicker && <div className="team-modal-backdrop" onMouseDown={() => setProjectPicker(null)}><form className="team-modal team-project-modal" onSubmit={submitProject} onMouseDown={(event) => event.stopPropagation()}>
+        <div className="team-modal-title"><div><span>GÁN ĐỀ TÀI</span><h2>Chọn đề tài cho {projectPicker.team.name}</h2></div><button type="button" onClick={() => setProjectPicker(null)}><X /></button></div>
+        {projectPicker.projects.length === 0 ? <div className="team-empty project-empty"><BookOpenCheck size={30} /><h3>Chưa có đề tài khả dụng</h3><p>Đề tài phải được phê duyệt và gán cho lớp trước.</p></div> : <label>Đề tài đã gán cho lớp<select required autoFocus value={projectPicker.projectId} onChange={(event) => setProjectPicker((current) => ({ ...current, projectId: event.target.value }))}><option value="">Chọn một đề tài</option>{projectPicker.projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select></label>}
+        <div className="team-modal-actions"><button type="button" onClick={() => setProjectPicker(null)}>Hủy</button>{projectPicker.projects.length > 0 && <button type="submit" className="team-primary" disabled={!projectPicker.projectId}>Xác nhận</button>}</div>
       </form></div>}
     </main>
   );

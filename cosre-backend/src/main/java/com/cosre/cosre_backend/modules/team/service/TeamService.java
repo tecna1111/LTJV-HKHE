@@ -128,11 +128,18 @@ public class TeamService {
     }
 
     @Transactional(readOnly = true)
-    public List<User> availableStudents(Long classroomId) {
-        return userRepository.findAll().stream()
+    public List<User> availableStudents(Long classroomId, String username) {
+        User lecturer = requireUser(username);
+        var classroom = classroomRepository.findDetailedById(classroomId)
+                .orElseThrow(() -> new ResourceNotFoundException("Classroom not found"));
+        if (classroom.getLecturers().stream().noneMatch(user -> user.getId().equals(lecturer.getId())))
+            throw new BusinessRuleException("Lecturer is not assigned to this classroom");
+        return classroom.getStudents().stream()
                 .filter(user -> user.isActive() && user.getRole() == RoleEnum.STUDENT)
                 .filter(user -> !teamRepository.existsByClassroomIdAndMembersId(classroomId, user.getId()))
-                .sorted(Comparator.comparing(User::getFullName, String.CASE_INSENSITIVE_ORDER)).toList();
+                .sorted(Comparator.comparing(User::getFullName,
+                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
+                .toList();
     }
 
     private Team requireOwned(Long id, String username) {
