@@ -40,7 +40,7 @@ public class SecurityConfig {
             throws Exception {
         http.cors(cors -> { }).csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/login", "/h2-console/**").permitAll()
+                        .requestMatchers("/api/v1/auth/login", "/h2-console/**", "/ws/**").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()));

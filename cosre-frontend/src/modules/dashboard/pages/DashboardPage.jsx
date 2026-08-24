@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Activity, ArrowRight, BarChart3, Bell, BookOpen, Building2, CircleAlert,
+  Activity, ArrowRight, BarChart3, BookOpen, Building2, CircleAlert,
   ClipboardCheck, FileUp, FolderKanban, GraduationCap, LayoutDashboard,
   LogOut, MessageSquare, Search, Settings, ShieldCheck, Sparkles, UserCheck,
   UserMinus, Users, Video,
 } from 'lucide-react';
 import BrandLogo from '../../../components/BrandLogo';
 import useAuthStore from '../../../store/useAuthStore';
+import AIChatWidget from '../../ai/components/AIChatWidget';
+import NotificationBell from '../../notification/components/NotificationBell';
 import { getUsers } from '../../account/accountService';
 import './DashboardPage.css';
 import './DashboardRoleExtensions.css';
@@ -26,7 +28,7 @@ const ROLE_NAV = {
     ['Tổng quan', LayoutDashboard], ['Tài khoản', Users, '/admin/users'], ['Báo cáo sự cố', CircleAlert, '/admin/reports'],
   ],
   HEAD_DEPT: [
-    ['Tổng quan', LayoutDashboard], ['Dự án chờ duyệt', ClipboardCheck, '/workflow'], ['Dự án đã duyệt', FolderKanban, '/workflow'],
+    ['Tổng quan', LayoutDashboard], ['Dự án chờ duyệt', ClipboardCheck, '/workflow?status=PENDING'], ['Dự án đã duyệt', FolderKanban, '/workflow?status=APPROVED'],
     ['Lớp học', BookOpen], ['Phân công dự án', Users], ['Báo cáo', BarChart3],
   ],
   STAFF: [
@@ -35,11 +37,11 @@ const ROLE_NAV = {
   ],
   LECTURER: [
     ['Tổng quan', LayoutDashboard], ['Lớp học', BookOpen], ['Dự án', FolderKanban, '/workflow'], ['Tạo dự án', Sparkles, '/lecturer/projects/new'], ['Nhóm sinh viên', Users, '/teams'],
-    ['Đánh giá', ClipboardCheck], ['Lịch họp', Video],
+    ['Đánh giá', ClipboardCheck], ['Tin nhắn', MessageSquare, '/messages'], ['Lịch họp', Video],
   ],
   STUDENT: [
-    ['Tổng quan', LayoutDashboard], ['Lớp học của tôi', BookOpen], ['Workspace nhóm', FolderKanban],
-    ['Nhiệm vụ', ClipboardCheck], ['Tài nguyên', GraduationCap], ['Tin nhắn', MessageSquare],
+    ['Tổng quan', LayoutDashboard], ['Lớp học của tôi', BookOpen], ['Workspace nhóm', FolderKanban, '/student/teams'],
+    ['Nhiệm vụ', ClipboardCheck], ['Tài nguyên', GraduationCap], ['Tin nhắn', MessageSquare, '/messages'],
   ],
 };
 
@@ -61,7 +63,7 @@ const ROLE_MODULES = {
   ],
   STUDENT: [
     ['Lớp học của tôi', 'Các lớp được phân công sẽ xuất hiện tại đây.', BookOpen],
-    ['Workspace nhóm', 'Không gian dự án sẽ sẵn sàng khi bạn được xếp nhóm.', FolderKanban],
+    ['Workspace nhóm', 'Không gian dự án sẽ sẵn sàng khi bạn được xếp nhóm.', FolderKanban, '/student/teams'],
     ['Nhiệm vụ', 'Nhiệm vụ được giao sẽ xuất hiện tại đây.', ClipboardCheck],
   ],
 };
@@ -99,8 +101,8 @@ export function DashboardShell({ role, displayName, children, activePath = '/das
     </aside>
     <section className="workspace-main">
       <header className="workspace-topbar"><div className="workspace-crumb"><LayoutDashboard size={15} /><span>Workspace</span><ArrowRight size={14} /><strong>{pageTitle}</strong></div>
-        <div className="workspace-actions"><label><Search size={17} /><input aria-label="Tìm kiếm" placeholder="Tìm kiếm nhanh..." /></label><button type="button" aria-label="Thông báo"><Bell size={18} /></button><div className="workspace-profile"><span>{initials(displayName)}</span><div><strong>{displayName}</strong><small>{meta.label}</small></div></div></div>
-      </header>{children}
+        <div className="workspace-actions"><label><Search size={17} /><input aria-label="Tìm kiếm" placeholder="Tìm kiếm nhanh..." /></label><NotificationBell/><div className="workspace-profile"><span>{initials(displayName)}</span><div><strong>{displayName}</strong><small>{meta.label}</small></div></div></div>
+      </header>{children}<AIChatWidget />
     </section>
   </main>;
 }

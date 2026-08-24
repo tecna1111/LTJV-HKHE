@@ -14,6 +14,7 @@ import com.cosre.cosre_backend.modules.classroom.repository.ClassroomRepository;
 import com.cosre.cosre_backend.modules.classroom.entity.Classroom;
 import com.cosre.cosre_backend.modules.project.repository.ClassroomProjectRepository;
 import com.cosre.cosre_backend.modules.project.entity.ClassroomProject;
+import com.cosre.cosre_backend.modules.notification.service.NotificationService;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ public class ProjectService {
     private final SyllabusRepository syllabusRepository;
     private final ClassroomRepository classroomRepository;
     private final ClassroomProjectRepository classroomProjectRepository;
+    private final NotificationService notificationService;
 
     public ProjectService(
             ProjectRepository projectRepository,
@@ -38,7 +40,8 @@ public class ProjectService {
             SubjectRepository subjectRepository,
             SyllabusRepository syllabusRepository,
             ClassroomRepository classroomRepository,
-            ClassroomProjectRepository classroomProjectRepository
+            ClassroomProjectRepository classroomProjectRepository,
+            NotificationService notificationService
     ) {
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
@@ -46,6 +49,7 @@ public class ProjectService {
         this.syllabusRepository = syllabusRepository;
         this.classroomRepository = classroomRepository;
         this.classroomProjectRepository = classroomProjectRepository;
+        this.notificationService = notificationService;
     }
 
     public ProjectResponse create(
@@ -161,6 +165,7 @@ public class ProjectService {
         }
 
         project.setStatus(ProjectStatus.PENDING);
+        notificationService.notifyProjectSubmitted(project.getId(), project.getTitle(), requireLecturer(username));
 
         return ProjectResponse.from(project);
     }
