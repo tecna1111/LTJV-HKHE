@@ -21,7 +21,6 @@ function SystemReportsPage() {
         <div className="reports-empty">
           <span><MessageSquareWarning size={27} /></span>
           <h3>Chưa có nguồn dữ liệu báo cáo</h3>
-          <p>Frontend đã có màn hình theo thiết kế Admin trong ZIP. Backend hiện chưa cung cấp Report API hoặc cấu hình email nên hệ thống không hiển thị dữ liệu mẫu để tránh nhầm với dữ liệu thật.</p>
           <div><ShieldCheck size={15} /> Cần bổ sung Report API và SMTP trước khi kích hoạt chức năng này.</div>
         </div>
       </section>
