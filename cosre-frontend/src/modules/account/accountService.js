@@ -24,3 +24,12 @@ export async function setUserStatus(id, active) {
   const response = await api.put(`/accounts/${id}/status`, null, { params: { active } });
   return response.data;
 }
+
+export async function importUsers(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post('/accounts/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+}

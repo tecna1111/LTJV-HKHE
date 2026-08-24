@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import ObjectiveListEditor from "../components/ObjectiveListEditor";
 import MilestoneEditor from "../components/MilestoneEditor";
 import {
@@ -7,7 +7,9 @@ import {
   generateMilestonesWithAI,
   createProject,
   submitProjectForApproval,
+  fetchMyProjects,
 } from "../api/projectApi";
+import { getApiError } from "../../../config/axios";
 import "../styles/CreateProjectPage.css";
 
 /**
@@ -31,6 +33,7 @@ export default function CreateProjectPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [savedProject, setSavedProject] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   // Tải danh sách môn học được phân công khi vào trang
   useEffect(() => {
@@ -42,7 +45,6 @@ export default function CreateProjectPage() {
   // Khi chọn môn học, tải đề cương tương ứng để dùng cho AI sinh mốc
   useEffect(() => {
     if (!selectedSubjectId) {
-      setSyllabus(null);
       return;
     }
     fetchSyllabus(selectedSubjectId)
@@ -53,7 +55,10 @@ export default function CreateProjectPage() {
           setObjectives(data.objectives);
         }
       })
-      .catch(() => setSyllabus(null));
+      .catch(() => {
+        setSyllabus(null);
+        setSaveError("Môn học này chưa có đề cương đang hoạt động. Staff cần tạo đề cương trước.");
+      });
   }, [selectedSubjectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGenerateMilestonesAI = async () => {
@@ -74,7 +79,7 @@ export default function CreateProjectPage() {
         objectives: cleanObjectives,
       });
       setMilestones(suggested);
-    } catch (err) {
+    } catch {
       setAiError("AI không tạo được mốc lúc này. Vui lòng thử lại hoặc thêm mốc thủ công.");
     } finally {
       setAiLoading(false);
@@ -85,6 +90,7 @@ export default function CreateProjectPage() {
     title: title.trim(),
     description: description.trim(),
     subjectId: selectedSubjectId,
+    syllabusId: syllabus?.id,
     objectives: objectives.filter((o) => o.trim() !== ""),
     milestones,
   });
@@ -92,6 +98,7 @@ export default function CreateProjectPage() {
   const validate = () => {
     if (!title.trim()) return "Vui lòng nhập tên dự án.";
     if (!selectedSubjectId) return "Vui lòng chọn môn học.";
+    if (!syllabus) return "Môn học chưa có đề cương đang hoạt động.";
     if (objectives.filter((o) => o.trim() !== "").length === 0)
       return "Vui lòng nhập ít nhất một mục tiêu.";
     if (milestones.length === 0) return "Vui lòng có ít nhất một cột mốc.";
@@ -106,11 +113,13 @@ export default function CreateProjectPage() {
     }
     setSaving(true);
     setSaveError(null);
+    setSuccessMessage(null);
     try {
       const project = await createProject(buildPayload());
       setSavedProject(project);
-    } catch (err) {
-      setSaveError("Lưu dự án thất bại. Vui lòng kiểm tra lại thông tin và thử lại.");
+      setSuccessMessage("Đã lưu bản nháp thành công.");
+    } catch (error) {
+      setSaveError(getApiError(error, "Lưu dự án thất bại. Vui lòng kiểm tra lại thông tin và thử lại."));
     } finally {
       setSaving(false);
     }
@@ -124,15 +133,29 @@ export default function CreateProjectPage() {
     }
     setSaving(true);
     setSaveError(null);
+    setSuccessMessage(null);
     try {
       let project = savedProject;
       if (!project) {
-        project = await createProject(buildPayload());
+        try {
+          project = await createProject(buildPayload());
+          setSavedProject(project);
+        } catch (createError) {
+          if (createError.response?.status !== 409) throw createError;
+          const existing = (await fetchMyProjects()).find((item) =>
+            item.status === "DRAFT"
+            && item.subjectId === Number(selectedSubjectId)
+            && item.title.trim().toLowerCase() === title.trim().toLowerCase());
+          if (!existing) throw createError;
+          project = existing;
+          setSavedProject(existing);
+        }
       }
       const submitted = await submitProjectForApproval(project.id);
       setSavedProject(submitted);
-    } catch (err) {
-      setSaveError("Gửi duyệt thất bại. Vui lòng thử lại.");
+      setSuccessMessage("Đã gửi dự án tới Trưởng bộ môn để phê duyệt.");
+    } catch (error) {
+      setSaveError(getApiError(error, "Gửi duyệt thất bại. Vui lòng thử lại."));
     } finally {
       setSaving(false);
     }
@@ -146,10 +169,9 @@ export default function CreateProjectPage() {
         gửi cho Trưởng bộ môn phê duyệt.
       </p>
 
-      {savedProject && (
+      {successMessage && (
         <div className="status-banner">
-          Dự án <strong>{savedProject.title || title}</strong> đã được lưu với
-          trạng thái <strong>{savedProject.status}</strong>.
+          <strong>Thành công:</strong> {successMessage}
         </div>
       )}
       {saveError && <div className="error-banner">{saveError}</div>}
@@ -159,7 +181,10 @@ export default function CreateProjectPage() {
         <select
           className="subject-select"
           value={selectedSubjectId}
-          onChange={(e) => setSelectedSubjectId(e.target.value)}
+          onChange={(e) => {
+            setSyllabus(null);
+            setSelectedSubjectId(e.target.value);
+          }}
         >
           <option value="">-- Chọn môn học --</option>
           {subjects.map((s) => (
@@ -223,6 +248,12 @@ export default function CreateProjectPage() {
           {saving ? "Đang gửi..." : "Gửi Trưởng bộ môn duyệt"}
         </button>
       </div>
+      {successMessage && (
+        <div className="project-success-toast" role="status" aria-live="polite">
+          <span>✓</span><div><strong>Thao tác thành công</strong><p>{successMessage}</p></div>
+          <button type="button" onClick={() => setSuccessMessage(null)} aria-label="Đóng thông báo">×</button>
+        </div>
+      )}
     </div>
   );
 }

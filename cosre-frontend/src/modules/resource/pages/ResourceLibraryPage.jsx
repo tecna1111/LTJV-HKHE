@@ -28,6 +28,7 @@ function formatSize(bytes) {
 function ResourceLibraryPage() {
   const navigate = useNavigate();
   const { fullName, username, clearAuth } = useAuthStore();
+  const role = useAuthStore((state) => state.role);
 
   const [tab, setTab] = useState('classroom');
   const [classrooms, setClassrooms] = useState([]);
@@ -49,10 +50,12 @@ function ResourceLibraryPage() {
     getClassrooms()
       .then((result) => setClassrooms(result.data || []))
       .catch((error) => setFeedback({ type: 'error', text: getApiError(error, 'Không thể tải danh sách lớp học.') }));
-    getTeams()
-      .then((result) => setTeams(result.data || []))
-      .catch((error) => setFeedback({ type: 'error', text: getApiError(error, 'Không thể tải danh sách nhóm.') }));
-  }, []);
+    if (role === 'LECTURER' || role === 'STUDENT') {
+      getTeams()
+        .then((result) => setTeams(result.data || []))
+        .catch((error) => setFeedback({ type: 'error', text: getApiError(error, 'Không thể tải danh sách nhóm.') }));
+    }
+  }, [role]);
 
   const selectedId = tab === 'classroom' ? selectedClassroomId : selectedTeamId;
 
@@ -66,6 +69,8 @@ function ResourceLibraryPage() {
       .finally(() => setLoading(false));
   };
 
+  // Đồng bộ danh sách file khi người dùng đổi phạm vi lớp/nhóm.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadResources(); }, [tab, selectedClassroomId, selectedTeamId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resetUploadForm = () => { setFile(null); setTitle(''); setDescription(''); };
@@ -111,13 +116,17 @@ function ResourceLibraryPage() {
   const logout = () => { clearAuth(); navigate('/login', { replace: true }); };
 
   const teamOptions = useMemo(() => teams, [teams]);
+  const tabs = role === 'LECTURER' || role === 'STUDENT' ? TABS : TABS.slice(0, 1);
+  const canUpload = tab === 'team'
+    ? role === 'LECTURER' || role === 'STUDENT'
+    : role === 'ADMIN' || role === 'STAFF' || role === 'LECTURER';
 
   return (
     <main className="resource-shell">
       <aside className="resource-sidebar">
         <BrandLogo />
         <nav>
-          {TABS.map(({ id, label, icon: Icon }) => (
+          {tabs.map(({ id, label, icon: Icon }) => (
             <button type="button" key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
               <Icon size={18} /> {label}
             </button>
@@ -155,7 +164,7 @@ function ResourceLibraryPage() {
             )}
           </div>
 
-          {selectedId && (
+          {selectedId && canUpload && (
             <form className="resource-upload-form" onSubmit={handleUpload}>
               <input
                 type="file"

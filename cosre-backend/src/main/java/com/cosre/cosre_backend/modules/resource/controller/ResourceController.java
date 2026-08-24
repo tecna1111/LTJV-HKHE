@@ -62,22 +62,21 @@ public class ResourceController {
     // Danh sách tài liệu của một lớp học.
     @GetMapping("/classroom/{classroomId}")
     @PreAuthorize("hasAnyRole('ADMIN','STAFF','HEAD_DEPT','LECTURER','STUDENT')")
-    public ApiResponse<List<ResourceResponse>> byClassroom(@PathVariable Long classroomId) {
-        return ok("Resources loaded", resourceService.listByClassroom(classroomId).stream().map(ResourceResponse::from).toList());
+    public ApiResponse<List<ResourceResponse>> byClassroom(@PathVariable Long classroomId, Authentication auth) {
+        return ok("Resources loaded", resourceService.listByClassroom(classroomId, auth.getName()).stream().map(ResourceResponse::from).toList());
     }
 
     // Danh sách file bài nộp của một nhóm.
     @GetMapping("/team/{teamId}")
     @PreAuthorize("hasAnyRole('LECTURER','STUDENT')")
-    public ApiResponse<List<ResourceResponse>> byTeam(@PathVariable Long teamId) {
-        return ok("Resources loaded", resourceService.listByTeam(teamId).stream().map(ResourceResponse::from).toList());
+    public ApiResponse<List<ResourceResponse>> byTeam(@PathVariable Long teamId, Authentication auth) {
+        return ok("Resources loaded", resourceService.listByTeam(teamId, auth.getName()).stream().map(ResourceResponse::from).toList());
     }
 
-    // Tải file về máy. Chỉ cần đăng nhập hợp lệ (đã áp dụng ở SecurityConfig),
-    // không giới hạn thêm theo role vì cả 5 vai trò đều có thể cần tải file.
+    // Tải file về máy; Service xác minh người dùng thuộc lớp/nhóm sở hữu file.
     @GetMapping("/{id}/download")
-    public ResponseEntity<Resource> download(@PathVariable Long id) {
-        ResourceService.FileDownload download = resourceService.loadForDownload(id);
+    public ResponseEntity<Resource> download(@PathVariable Long id, Authentication auth) {
+        ResourceService.FileDownload download = resourceService.loadForDownload(id, auth.getName());
         Resource fileResource = new FileSystemResource(download.path());
         String encodedName = UriUtils.encode(download.resource().getOriginalFileName(), StandardCharsets.UTF_8);
         return ResponseEntity.ok()

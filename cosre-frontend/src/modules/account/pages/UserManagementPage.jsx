@@ -123,7 +123,6 @@ function UserManagementPage() {
         </div>
       </section>
 
-      <p className="accounts-permission-note"><ShieldAlert size={14} /> Theo đặc tả COSRE, Admin xem và vô hiệu hóa tài khoản; chức năng tạo/import và phân lớp thuộc vai trò Staff.</p>
     </AdminLayout>
   );
 }

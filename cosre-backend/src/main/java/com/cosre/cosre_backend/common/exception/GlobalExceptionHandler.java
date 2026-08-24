@@ -13,15 +13,23 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+  
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ApiResponse<>(false, exception.getMessage(), null));
     }
 
+ 
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<ApiResponse<Void>> handleConflict(DuplicateResourceException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiResponse<>(false, exception.getMessage(), null));
+    }
+
+    @ExceptionHandler(BusinessRuleException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBusinessRule(BusinessRuleException exception) {
+        return ResponseEntity.badRequest()
                 .body(new ApiResponse<>(false, exception.getMessage(), null));
     }
 
@@ -31,5 +39,22 @@ public class GlobalExceptionHandler {
         exception.getBindingResult().getFieldErrors()
                 .forEach(error -> errors.putIfAbsent(error.getField(), error.getDefaultMessage()));
         return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Validation failed", errors));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBadRequest(IllegalArgumentException exception) {
+        return ResponseEntity.badRequest().body(new ApiResponse<>(false, exception.getMessage(), null));
+    }
+        @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(
+            org.springframework.orm.ObjectOptimisticLockingFailureException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiResponse<>(false, "Dữ liệu đã được người khác cập nhật, vui lòng tải lại", null));
+    }
+
+    @ExceptionHandler(ExternalServiceException.class)
+    public ResponseEntity<ApiResponse<Void>> handleExternalService(ExternalServiceException exception) {
+        return ResponseEntity.status(exception.getStatus())
+                .body(new ApiResponse<>(false, exception.getMessage(), null));
     }
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import TeamCard from "../components/TeamCard";
 import ContributionTable from "../components/ContributionTable";
 import {
@@ -39,9 +39,9 @@ export default function TeamManagementPage() {
   // Tải danh sách nhóm mỗi khi đổi lớp
   useEffect(() => {
     if (!selectedClassId) {
-      setTeams([]);
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTeamsLoading(true);
     setTeamsError(null);
     fetchTeamsByClass(selectedClassId)
@@ -63,7 +63,7 @@ export default function TeamManagementPage() {
     try {
       const data = await fetchTeamContributions(team.id);
       setContributionsByTeam((prev) => ({ ...prev, [team.id]: data }));
-    } catch (err) {
+    } catch {
       setContributionError("Không tải được dữ liệu đóng góp của nhóm này.");
     } finally {
       setContributionLoading(false);
