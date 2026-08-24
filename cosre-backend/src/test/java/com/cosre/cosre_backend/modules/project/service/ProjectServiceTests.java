@@ -15,6 +15,7 @@ import com.cosre.cosre_backend.modules.classroom.repository.ClassroomRepository;
 import com.cosre.cosre_backend.modules.project.repository.ClassroomProjectRepository;
 import com.cosre.cosre_backend.modules.syllabus.entity.Syllabus;
 import com.cosre.cosre_backend.modules.subject.entity.Subject;
+import com.cosre.cosre_backend.modules.notification.service.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,12 +38,13 @@ class ProjectServiceTests {
     @Mock SyllabusRepository syllabusRepository;
     @Mock ClassroomRepository classroomRepository;
     @Mock ClassroomProjectRepository classroomProjectRepository;
+    @Mock NotificationService notificationService;
     private ProjectService service;
     private User lecturer;
 
     @BeforeEach
     void setUp() {
-        service = new ProjectService(projectRepository, userRepository, subjectRepository, syllabusRepository, classroomRepository, classroomProjectRepository);
+        service = new ProjectService(projectRepository, userRepository, subjectRepository, syllabusRepository, classroomRepository, classroomProjectRepository, notificationService);
         lecturer = new User();
         lecturer.setId(7L);
         lecturer.setUsername("lecturer");
@@ -74,6 +76,8 @@ class ProjectServiceTests {
     @Test
     void submitChangesOwnedDraftToPending() {
         Project project = new Project();
+        project.setId(3L);
+        project.setTitle("COSRE");
         project.setCreatedBy(7L);
         project.setStatus(ProjectStatus.DRAFT);
         project.setObjectives(new java.util.ArrayList<>(List.of("Demo")));
@@ -88,6 +92,7 @@ class ProjectServiceTests {
         var response = service.submit(3L, "lecturer");
 
         assertEquals(ProjectStatus.PENDING, response.status());
+        verify(notificationService).notifyProjectSubmitted(3L, "COSRE", lecturer);
     }
 
     @Test

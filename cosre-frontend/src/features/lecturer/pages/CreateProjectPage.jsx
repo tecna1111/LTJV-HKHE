@@ -33,6 +33,7 @@ export default function CreateProjectPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [savedProject, setSavedProject] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   // Tải danh sách môn học được phân công khi vào trang
   useEffect(() => {
@@ -112,9 +113,11 @@ export default function CreateProjectPage() {
     }
     setSaving(true);
     setSaveError(null);
+    setSuccessMessage(null);
     try {
       const project = await createProject(buildPayload());
       setSavedProject(project);
+      setSuccessMessage("Đã lưu bản nháp thành công.");
     } catch (error) {
       setSaveError(getApiError(error, "Lưu dự án thất bại. Vui lòng kiểm tra lại thông tin và thử lại."));
     } finally {
@@ -130,6 +133,7 @@ export default function CreateProjectPage() {
     }
     setSaving(true);
     setSaveError(null);
+    setSuccessMessage(null);
     try {
       let project = savedProject;
       if (!project) {
@@ -149,6 +153,7 @@ export default function CreateProjectPage() {
       }
       const submitted = await submitProjectForApproval(project.id);
       setSavedProject(submitted);
+      setSuccessMessage("Đã gửi dự án tới Trưởng bộ môn để phê duyệt.");
     } catch (error) {
       setSaveError(getApiError(error, "Gửi duyệt thất bại. Vui lòng thử lại."));
     } finally {
@@ -164,10 +169,9 @@ export default function CreateProjectPage() {
         gửi cho Trưởng bộ môn phê duyệt.
       </p>
 
-      {savedProject && (
+      {successMessage && (
         <div className="status-banner">
-          Dự án <strong>{savedProject.title || title}</strong> đã được lưu với
-          trạng thái <strong>{savedProject.status}</strong>.
+          <strong>Thành công:</strong> {successMessage}
         </div>
       )}
       {saveError && <div className="error-banner">{saveError}</div>}
@@ -244,6 +248,12 @@ export default function CreateProjectPage() {
           {saving ? "Đang gửi..." : "Gửi Trưởng bộ môn duyệt"}
         </button>
       </div>
+      {successMessage && (
+        <div className="project-success-toast" role="status" aria-live="polite">
+          <span>✓</span><div><strong>Thao tác thành công</strong><p>{successMessage}</p></div>
+          <button type="button" onClick={() => setSuccessMessage(null)} aria-label="Đóng thông báo">×</button>
+        </div>
+      )}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import com.cosre.cosre_backend.modules.chat.dto.SendChatMessageRequest;
 import com.cosre.cosre_backend.modules.chat.entity.ChatMessage;
 import com.cosre.cosre_backend.modules.chat.entity.ChatRoomType;
 import com.cosre.cosre_backend.modules.chat.repository.ChatMessageRepository;
+import com.cosre.cosre_backend.modules.notification.service.NotificationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -18,11 +19,14 @@ public class ChatService {
     private final ChatMessageRepository repository;
     private final UserRepository userRepository;
     private final ChatRoomAccessService accessService;
+    private final NotificationService notificationService;
 
-    public ChatService(ChatMessageRepository repository, UserRepository userRepository, ChatRoomAccessService accessService) {
+    public ChatService(ChatMessageRepository repository, UserRepository userRepository,
+            ChatRoomAccessService accessService, NotificationService notificationService) {
         this.repository = repository;
         this.userRepository = userRepository;
         this.accessService = accessService;
+        this.notificationService = notificationService;
     }
 
     public ChatMessageResponse send(ChatRoomType roomType, Long roomId, String username,
@@ -34,7 +38,9 @@ public class ChatService {
         message.setRoomId(roomId);
         message.setSenderId(sender.getId());
         message.setContent(request.content().trim());
-        return ChatMessageResponse.from(repository.save(message), sender);
+        ChatMessage saved = repository.save(message);
+        notificationService.notifyChat(roomType, roomId, sender, saved.getContent());
+        return ChatMessageResponse.from(saved, sender);
     }
 
     @Transactional(readOnly = true)
