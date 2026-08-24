@@ -15,6 +15,7 @@ import TeamWorkspacePage from '../modules/team/pages/TeamWorkspacePage';
 import WhiteboardPage from '../modules/collaboration/pages/WhiteboardPage';
 import StudentTeamsPage from '../modules/team/pages/StudentTeamsPage';
 import ChatPage from '../modules/chat/pages/ChatPage';
+import ResourceLibraryPage from '../modules/resource/pages/ResourceLibraryPage';
 
 function AppRoutes() {
   return (
@@ -28,6 +29,7 @@ function AppRoutes() {
         <Route path="/teams/:id/whiteboard" element={<ProtectedRoute><WhiteboardPage /></ProtectedRoute>} />
         <Route path="/student/teams" element={<ProtectedRoute requiredRole="STUDENT"><StudentTeamsPage /></ProtectedRoute>} />
         <Route path="/messages" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+        <Route path="/resources" element={<ProtectedRoute><ResourceLibraryPage /></ProtectedRoute>} />
         <Route
           path="/lecturer/projects/new"
           element={

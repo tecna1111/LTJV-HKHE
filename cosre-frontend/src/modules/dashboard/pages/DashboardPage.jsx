@@ -33,15 +33,15 @@ const ROLE_NAV = {
   ],
   STAFF: [
     ['Tổng quan', LayoutDashboard, '/dashboard'], ['Môn học', BookOpen, '/staff/subjects'], ['Đề cương', FileUp, '/workflow'],
-    ['Lớp học & thành viên', Building2, '/staff/classrooms'], ['Tài khoản', Users, '/staff/accounts/import'],
+    ['Lớp học & thành viên', Building2, '/staff/classrooms'], ['Tài nguyên', GraduationCap, '/resources'], ['Tài khoản', Users, '/staff/accounts/import'],
   ],
   LECTURER: [
     ['Tổng quan', LayoutDashboard], ['Lớp học', BookOpen], ['Dự án', FolderKanban, '/workflow'], ['Tạo dự án', Sparkles, '/lecturer/projects/new'], ['Nhóm sinh viên', Users, '/teams'],
-    ['Đánh giá', ClipboardCheck], ['Tin nhắn', MessageSquare, '/messages'], ['Lịch họp', Video],
+    ['Đánh giá', ClipboardCheck], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'], ['Lịch họp', Video],
   ],
   STUDENT: [
     ['Tổng quan', LayoutDashboard], ['Lớp học của tôi', BookOpen], ['Workspace nhóm', FolderKanban, '/student/teams'],
-    ['Nhiệm vụ', ClipboardCheck], ['Tài nguyên', GraduationCap], ['Tin nhắn', MessageSquare, '/messages'],
+    ['Nhiệm vụ', ClipboardCheck], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'],
   ],
 };
 
