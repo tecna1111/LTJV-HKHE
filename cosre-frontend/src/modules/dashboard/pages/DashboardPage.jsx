@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import BrandLogo from '../../../components/BrandLogo';
 import useAuthStore from '../../../store/useAuthStore';
+import AIChatWidget from '../../ai/components/AIChatWidget';
 import { getUsers } from '../../account/accountService';
 import './DashboardPage.css';
 import './DashboardRoleExtensions.css';
@@ -100,7 +101,7 @@ export function DashboardShell({ role, displayName, children, activePath = '/das
     <section className="workspace-main">
       <header className="workspace-topbar"><div className="workspace-crumb"><LayoutDashboard size={15} /><span>Workspace</span><ArrowRight size={14} /><strong>{pageTitle}</strong></div>
         <div className="workspace-actions"><label><Search size={17} /><input aria-label="Tìm kiếm" placeholder="Tìm kiếm nhanh..." /></label><button type="button" aria-label="Thông báo"><Bell size={18} /></button><div className="workspace-profile"><span>{initials(displayName)}</span><div><strong>{displayName}</strong><small>{meta.label}</small></div></div></div>
-      </header>{children}
+      </header>{children}<AIChatWidget />
     </section>
   </main>;
 }

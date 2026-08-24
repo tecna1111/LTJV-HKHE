@@ -12,8 +12,7 @@ public class Whiteboard {
     @Column(name = "team_id", nullable = false, unique = true)
     private Long teamId;
 
-    @Lob
-    @Column(name = "canvas_data", nullable = false)
+    @Column(name = "canvas_data", nullable = false, columnDefinition = "TEXT")
     private String canvasData;
 
     @Version
