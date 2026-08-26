@@ -10,6 +10,7 @@ import AccountImportPage from '../modules/account/pages/AccountImportPage';
 import SubjectListPage from '../modules/subject/pages/SubjectListPage';
 import ClassroomListPage from '../modules/classroom/pages/ClassroomListPage';
 import ClassroomDetailPage from '../modules/classroom/pages/ClassroomDetailPage';
+import ClassroomImportPage from '../modules/classroom/pages/ClassroomImportPage';
 import ProjectWorkflowPage from '../modules/workflow/pages/ProjectWorkflowPage';
 import TeamWorkspacePage from '../modules/team/pages/TeamWorkspacePage';
 import WhiteboardPage from '../modules/collaboration/pages/WhiteboardPage';
@@ -51,6 +52,10 @@ function AppRoutes() {
         <Route
           path="/staff/classrooms"
           element={<ProtectedRoute requiredRole="STAFF"><ClassroomListPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/staff/classrooms/import"
+          element={<ProtectedRoute requiredRole="STAFF"><ClassroomImportPage /></ProtectedRoute>}
         />
         <Route
           path="/staff/classrooms/:id"
