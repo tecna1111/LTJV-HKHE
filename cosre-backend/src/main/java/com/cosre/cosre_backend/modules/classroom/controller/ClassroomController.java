@@ -3,12 +3,17 @@ package com.cosre.cosre_backend.modules.classroom.controller;
 import com.cosre.cosre_backend.common.constants.RoleEnum;
 import com.cosre.cosre_backend.common.dto.ApiResponse;
 import com.cosre.cosre_backend.modules.classroom.dto.*;
+import com.cosre.cosre_backend.modules.classroom.service.ClassroomImportService;
 import com.cosre.cosre_backend.modules.classroom.service.ClassroomService;
+import com.cosre.cosre_backend.modules.classroom.service.ClassroomTemplateService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 /**
@@ -19,9 +24,66 @@ import java.util.List;
 @RequestMapping("/api/v1/classrooms")
 public class ClassroomController {
     private final ClassroomService classroomService;
+    private final ClassroomImportService classroomImportService;
+    private final ClassroomTemplateService classroomTemplateService;
 
-    public ClassroomController(ClassroomService classroomService) {
+    public ClassroomController(ClassroomService classroomService, ClassroomImportService classroomImportService,
+            ClassroomTemplateService classroomTemplateService) {
         this.classroomService = classroomService;
+        this.classroomImportService = classroomImportService;
+        this.classroomTemplateService = classroomTemplateService;
+    }
+
+    // Import danh sách lớp học từ file CSV/XLSX để tự động tạo hàng loạt lớp học.
+    @PostMapping(value = "/import", consumes = "multipart/form-data")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    public ResponseEntity<ApiResponse<ImportClassroomsResult>> importClassrooms(@RequestParam("file") MultipartFile file) {
+        ImportClassroomsResult result = classroomImportService.importClassrooms(file);
+        String message = result.failedCount() == 0 ? "Import danh sách lớp học thành công" : "Import hoàn tất, một số dòng không hợp lệ";
+        return ResponseEntity.ok(new ApiResponse<>(true, message, result));
+    }
+
+    // Import danh sách sinh viên từ file CSV/XLSX để gán hàng loạt vào một lớp học có sẵn.
+    @PostMapping(value = "/{id}/students/import", consumes = "multipart/form-data")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    public ResponseEntity<ApiResponse<ImportClassMembersResult>> importStudents(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        return importMembers(id, file, RoleEnum.STUDENT, "sinh viên");
+    }
+
+    // Import danh sách giảng viên từ file CSV/XLSX để gán hàng loạt vào một lớp học có sẵn.
+    @PostMapping(value = "/{id}/lecturers/import", consumes = "multipart/form-data")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    public ResponseEntity<ApiResponse<ImportClassMembersResult>> importLecturers(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        return importMembers(id, file, RoleEnum.LECTURER, "giảng viên");
+    }
+
+    private ResponseEntity<ApiResponse<ImportClassMembersResult>> importMembers(Long id, MultipartFile file, RoleEnum role, String roleLabel) {
+        ImportClassMembersResult result = classroomImportService.importMembers(id, file, role);
+        String message = result.failedCount() == 0
+                ? "Import danh sách " + roleLabel + " thành công"
+                : "Import hoàn tất, một số dòng không hợp lệ";
+        return ResponseEntity.ok(new ApiResponse<>(true, message, result));
+    }
+
+    // Tải tệp Excel mẫu (.xlsx) để điền danh sách lớp học trước khi import.
+    @GetMapping("/import/template")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    public ResponseEntity<byte[]> downloadClassroomTemplate() {
+        return excelFile(classroomTemplateService.buildClassroomTemplate(), "mau-import-lop-hoc.xlsx");
+    }
+
+    // Tải tệp Excel mẫu (.xlsx) để điền danh sách thành viên (SV/GV) trước khi import vào lớp.
+    @GetMapping("/members-import/template")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    public ResponseEntity<byte[]> downloadMemberTemplate() {
+        return excelFile(classroomTemplateService.buildMemberTemplate(), "mau-import-thanh-vien-lop.xlsx");
+    }
+
+    private ResponseEntity<byte[]> excelFile(byte[] content, String filename) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(content);
     }
 
     // Trả về danh sách người dùng đủ điều kiện được gán vào lớp học với vai trò giảng viên hoặc sinh viên.

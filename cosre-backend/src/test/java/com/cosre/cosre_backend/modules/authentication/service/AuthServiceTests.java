@@ -40,11 +40,14 @@ class AuthServiceTests {
         when(userRepository.findByUsername("lecturer")).thenReturn(Optional.of(lecturer));
         when(passwordEncoder.matches("secret", "encoded")).thenReturn(true);
         when(jwtConfig.generateToken("lecturer", RoleEnum.LECTURER)).thenReturn("jwt-token");
+        when(jwtConfig.generateRefreshToken("lecturer", RoleEnum.LECTURER)).thenReturn("refresh-token");
+        when(jwtConfig.getExpirationMs()).thenReturn(86400000L);
 
         var result = service.login("lecturer", "secret", RoleEnum.LECTURER);
 
         assertThat(result).isPresent();
         assertThat(result.orElseThrow().token()).isEqualTo("jwt-token");
+        assertThat(result.orElseThrow().refreshToken()).isEqualTo("refresh-token");
         assertThat(result.orElseThrow().role()).isEqualTo("LECTURER");
     }
 
@@ -69,5 +72,31 @@ class AuthServiceTests {
         when(userRepository.findByUsername("lecturer")).thenReturn(Optional.of(lecturer));
         assertThat(service.login("lecturer", "secret", RoleEnum.STUDENT)).isEmpty();
         verifyNoInteractions(passwordEncoder, jwtConfig);
+    }
+
+    @Test
+    void refreshRotatesTokensForActiveAccount() {
+        when(jwtConfig.validateToken("old-refresh-token")).thenReturn(true);
+        when(jwtConfig.isRefreshToken("old-refresh-token")).thenReturn(true);
+        when(jwtConfig.getUsername("old-refresh-token")).thenReturn("lecturer");
+        when(jwtConfig.getRole("old-refresh-token")).thenReturn(RoleEnum.LECTURER);
+        when(userRepository.findByUsername("lecturer")).thenReturn(Optional.of(lecturer));
+        when(jwtConfig.generateToken("lecturer", RoleEnum.LECTURER)).thenReturn("new-access-token");
+        when(jwtConfig.generateRefreshToken("lecturer", RoleEnum.LECTURER)).thenReturn("new-refresh-token");
+
+        var result = service.refresh("old-refresh-token");
+
+        assertThat(result).isPresent();
+        assertThat(result.orElseThrow().token()).isEqualTo("new-access-token");
+        assertThat(result.orElseThrow().refreshToken()).isEqualTo("new-refresh-token");
+    }
+
+    @Test
+    void refreshRejectsAccessToken() {
+        when(jwtConfig.validateToken("access-token")).thenReturn(true);
+        when(jwtConfig.isRefreshToken("access-token")).thenReturn(false);
+
+        assertThat(service.refresh("access-token")).isEmpty();
+        verifyNoInteractions(userRepository);
     }
 }

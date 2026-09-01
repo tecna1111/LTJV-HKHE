@@ -64,7 +64,7 @@ function LoginPage() {
         setError('Tài khoản không thuộc vai trò đã chọn. Vui lòng chọn đúng vai trò để đăng nhập.');
         return;
       }
-      setAuth(result.data.token, result.data.username, result.data.fullName, result.data.role, rememberMe);
+      setAuth(result.data.token, result.data.refreshToken, result.data.username, result.data.fullName, result.data.role, rememberMe);
       navigate('/dashboard', { replace: true });
     } catch (requestError) {
       setError(getApiError(requestError, 'Đăng nhập thất bại. Vui lòng kiểm tra thông tin.'));

@@ -40,10 +40,15 @@ public class SecurityConfig {
             throws Exception {
         http.cors(cors -> { }).csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/login", "/h2-console/**", "/ws/**").permitAll()
+                        .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh", "/h2-console/**", "/ws/**").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()));
+                .headers(headers -> headers
+                        .frameOptions(frameOptions -> frameOptions.sameOrigin())
+                        .contentTypeOptions(contentTypeOptions -> { })
+                        .referrerPolicy(referrer -> referrer.policy(
+                                org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+                        .permissionsPolicyHeader(permissions -> permissions.policy("camera=(), microphone=(), geolocation=()")));
 
         http.addFilterBefore(new JwtAuthenticationFilter(jwtConfig, accountService),
                 UsernamePasswordAuthenticationFilter.class);
@@ -57,7 +62,7 @@ public class SecurityConfig {
             List<String> allowedOriginPatterns) {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(allowedOriginPatterns);
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
