@@ -1,0 +1,48 @@
+.es-shell { --blue:#2563eb; --muted:#64748b; min-height:100vh; display:grid; grid-template-columns:240px 1fr; background:#f6f8fc; color:#172033; }
+.es-sidebar { position:sticky; top:0; height:100vh; box-sizing:border-box; display:flex; flex-direction:column; padding:24px 18px; border-right:1px solid #e5eaf2; background:#fff; }
+.es-sidebar > .brand-lockup { margin:0 8px 36px; }
+.es-sidebar nav { display:flex; flex-direction:column; gap:7px; }
+.es-sidebar nav button, .es-logout { display:flex; align-items:center; gap:11px; padding:13px 14px; border:0; border-radius:11px; background:transparent; color:var(--muted); font-weight:700; cursor:pointer; text-align:left; }
+.es-sidebar nav button.active { background:#eef4ff; color:var(--blue); }
+.es-logout { margin-top:auto; color:#ef4444; }
+.es-main { min-width:0; }
+.es-topbar { height:72px; display:flex; align-items:center; justify-content:space-between; padding:0 34px; border-bottom:1px solid #e5eaf2; background:#fff; }
+.es-topbar div { display:flex; flex-direction:column; gap:4px; }
+.es-topbar small, .es-heading span { color:#2563eb; font-size:10px; font-weight:850; letter-spacing:.14em; }
+.es-topbar strong { font-size:13px; }
+.es-topbar > button { width:38px; height:38px; display:grid; place-items:center; border:1px solid #e2e8f0; border-radius:11px; background:#fff; color:#64748b; cursor:pointer; }
+.es-content { padding:34px; max-width:1300px; margin:auto; }
+.es-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+.es-heading h1 { margin:7px 0 4px; font-size:30px; letter-spacing:-.04em; }
+.es-heading p { margin:0; color:var(--muted); }
+.es-lock { display:flex; align-items:center; gap:8px; padding:11px 17px; border:0; border-radius:11px; background:#fef2f2; color:#b91c1c; font-weight:800; cursor:pointer; }
+.es-lock:disabled { opacity:.6; cursor:not-allowed; }
+.es-feedback { display:flex; align-items:center; gap:8px; margin:18px 0; padding:12px 15px; border-radius:11px; font-size:13px; font-weight:650; }
+.es-feedback.success { background:#ecfdf5; color:#047857; }
+.es-feedback.error { background:#fef2f2; color:#b91c1c; }
+.es-empty { display:flex; min-height:220px; align-items:center; justify-content:center; flex-direction:column; border:1px dashed #cbd5e1; border-radius:17px; background:#fff; color:#64748b; margin-top:20px; gap:6px; }
+.es-empty h3 { margin:12px 0 3px; color:#334155; }
+.es-empty p { margin:0; }
+.es-team-tabs { display:flex; flex-wrap:wrap; gap:8px; margin:22px 0 18px; }
+.es-team-tabs button { padding:9px 15px; border:1px solid #e2e8f0; border-radius:10px; background:#fff; color:#64748b; font-weight:750; font-size:12.5px; cursor:pointer; }
+.es-team-tabs button.active { border-color:#2563eb; background:#eef4ff; color:#2563eb; }
+.es-summary-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+.es-summary-card { padding:18px; border:1px solid #e3e9f2; border-radius:16px; background:#fff; box-shadow:0 7px 24px #0f172a0a; }
+.es-summary-card header { display:flex; align-items:center; gap:11px; }
+.es-summary-card header > span { width:36px; height:36px; flex-shrink:0; display:grid; place-items:center; border-radius:10px; background:#dbeafe; color:#1d4ed8; font-size:12px; font-weight:850; }
+.es-summary-card header > div { display:flex; min-width:0; flex:1; flex-direction:column; }
+.es-summary-card header strong { overflow:hidden; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
+.es-summary-card header small { color:#94a3b8; font-size:10px; }
+.es-summary-card header em { padding:5px 10px; border-radius:9px; background:#f0fdf4; color:#15803d; font-style:normal; font-weight:850; font-size:13px; }
+.es-breakdown { display:flex; flex-wrap:wrap; gap:7px; margin-top:14px; }
+.es-breakdown span { padding:5px 9px; border-radius:8px; background:#f8fafc; color:#475569; font-size:11px; }
+
+@media (max-width:760px) {
+  .es-shell { display:block; }
+  .es-sidebar { position:static; width:auto; height:auto; flex-direction:row; align-items:center; padding:14px 18px; }
+  .es-sidebar > .brand-lockup { margin:0 auto 0 0; }
+  .es-sidebar nav { flex-direction:row; }
+  .es-sidebar nav button:first-child, .es-logout { display:none; }
+  .es-topbar { padding:0 18px; }
+  .es-content { padding:24px 18px; }
+}

@@ -4,6 +4,10 @@ import UserManagementPage from '../modules/account/pages/UserManagementPage';
 import ProtectedRoute from './ProtectedRoute';
 import DashboardPage from '../modules/dashboard/pages/DashboardPage';
 import SystemReportsPage from '../modules/report/pages/SystemReportsPage';
+import TeamManagementPage from '../modules/team/pages/TeamManagementPage';
+import CreateProjectPage from '../features/lecturer/pages/CreateProjectPage';
+import PeerEvaluationPage from '../modules/evaluation/pages/PeerEvaluationPage';
+import EvaluationSummaryPage from '../modules/evaluation/pages/EvaluationSummaryPage';
 
 function AppRoutes() {
   return (
@@ -12,6 +16,38 @@ function AppRoutes() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route
+          path="/lecturer/projects/new"
+          element={
+            <ProtectedRoute requiredRole="LECTURER">
+              <CreateProjectPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teams"
+          element={
+            <ProtectedRoute requiredRole="LECTURER">
+              <TeamManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/peer-evaluations"
+          element={
+            <ProtectedRoute requiredRole="STUDENT">
+              <PeerEvaluationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/evaluations/summary"
+          element={
+            <ProtectedRoute requiredRole="LECTURER">
+              <EvaluationSummaryPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/admin/users"
           element={

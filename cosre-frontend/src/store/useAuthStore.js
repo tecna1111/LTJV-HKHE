@@ -8,6 +8,7 @@ const useAuthStore = create((set) => ({
   username: readStored('cosre_username'),
   fullName: readStored('cosre_full_name'),
   role: readStored('cosre_role'),
+  setIdentity: (username, fullName, role) => set({ username, fullName, role }),
   setAuth: (token, username, fullName, role, remember = true) => {
     authKeys.forEach((key) => { localStorage.removeItem(key); sessionStorage.removeItem(key); });
     const storage = remember ? localStorage : sessionStorage;

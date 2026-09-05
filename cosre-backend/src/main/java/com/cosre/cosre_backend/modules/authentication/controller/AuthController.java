@@ -26,10 +26,10 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request.getUsername(), request.getPassword())
+        return authService.login(request.getUsername(), request.getPassword(), request.getRole())
                 .map(response -> ResponseEntity.ok(new ApiResponse<>(true, "Login successful", response)))
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(new ApiResponse<LoginResponse>(false, "Invalid username or password", null)));
+                        .body(new ApiResponse<LoginResponse>(false, "Invalid username, password, or selected role", null)));
     }
 
     @GetMapping("/me")
