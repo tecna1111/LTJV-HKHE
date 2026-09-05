@@ -18,12 +18,6 @@ import org.springframework.web.util.UriUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-/**
- * Controller REST cho module Resource: tài liệu môn học (theo lớp học) và
- * file bài nộp (theo nhóm). Upload dùng multipart/form-data, download trả
- * file trực tiếp kèm header Content-Disposition để trình duyệt lưu đúng
- * tên file gốc.
- */
 @RestController
 @RequestMapping("/api/v1/resources")
 public class ResourceController {
@@ -59,11 +53,12 @@ public class ResourceController {
         return ResponseEntity.status(201).body(ok("Resource uploaded", ResourceResponse.from(resource)));
     }
 
-    // Danh sách tài liệu của một lớp học.
+    // Danh sách tài liệu của một lớp học. Sinh viên chỉ xem được lớp mình theo học
+    // (kiểm tra quyền trong Service, ném AccessDeniedException nếu không thuộc lớp).
     @GetMapping("/classroom/{classroomId}")
     @PreAuthorize("hasAnyRole('ADMIN','STAFF','HEAD_DEPT','LECTURER','STUDENT')")
-    public ApiResponse<List<ResourceResponse>> byClassroom(@PathVariable Long classroomId) {
-        return ok("Resources loaded", resourceService.listByClassroom(classroomId).stream().map(ResourceResponse::from).toList());
+    public ApiResponse<List<ResourceResponse>> byClassroom(@PathVariable Long classroomId, Authentication auth) {
+        return ok("Resources loaded", resourceService.listByClassroom(classroomId, auth.getName()).stream().map(ResourceResponse::from).toList());
     }
 
     // Danh sách file bài nộp của một nhóm.

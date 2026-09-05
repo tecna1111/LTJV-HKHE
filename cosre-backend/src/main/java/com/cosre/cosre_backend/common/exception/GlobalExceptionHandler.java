@@ -10,28 +10,23 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Tập trung xử lý lỗi cho REST API.
- * Điều này giúp tất cả exception được chuyển thành cấu trúc JSON thống nhất cho frontend.
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // Xử lý trường hợp tài nguyên được yêu cầu không tồn tại.
+  
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ApiResponse<>(false, exception.getMessage(), null));
     }
 
-    // Xử lý xung đột tài nguyên trùng lặp như trùng mã lớp học.
+ 
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<ApiResponse<Void>> handleConflict(DuplicateResourceException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ApiResponse<>(false, exception.getMessage(), null));
     }
 
-    // Chuyển lỗi validation của bean thành map dễ đọc cho client.
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessRule(BusinessRuleException exception) {
         return ResponseEntity.badRequest()
@@ -46,9 +41,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Validation failed", errors));
     }
 
-    // Chuyển các tham số nghiệp vụ không hợp lệ thành response 400.
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadRequest(IllegalArgumentException exception) {
         return ResponseEntity.badRequest().body(new ApiResponse<>(false, exception.getMessage(), null));
+    }
+        @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(
+            org.springframework.orm.ObjectOptimisticLockingFailureException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiResponse<>(false, "Dữ liệu đã được người khác cập nhật, vui lòng tải lại", null));
+    }
+
+    @ExceptionHandler(ExternalServiceException.class)
+    public ResponseEntity<ApiResponse<Void>> handleExternalService(ExternalServiceException exception) {
+        return ResponseEntity.status(exception.getStatus())
+                .body(new ApiResponse<>(false, exception.getMessage(), null));
     }
 }

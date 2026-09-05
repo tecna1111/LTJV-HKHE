@@ -4,11 +4,14 @@ import com.cosre.cosre_backend.common.dto.ApiResponse;
 import com.cosre.cosre_backend.modules.account.dto.CreateUserRequest;
 import com.cosre.cosre_backend.modules.account.dto.UpdateUserRequest;
 import com.cosre.cosre_backend.modules.account.dto.UserResponse;
+import com.cosre.cosre_backend.modules.account.dto.ImportUsersResult;
 import com.cosre.cosre_backend.modules.account.service.AccountService;
+import com.cosre.cosre_backend.modules.account.service.UserImportService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -17,9 +20,21 @@ import java.util.List;
 public class AccountController {
 
     private final AccountService accountService;
+    private final UserImportService userImportService;
 
-    public AccountController(AccountService accountService) {
+    public AccountController(AccountService accountService, UserImportService userImportService) {
         this.accountService = accountService;
+        this.userImportService = userImportService;
+    }
+
+    @PostMapping(value = "/import", consumes = "multipart/form-data")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<ImportUsersResult>> importUsers(@RequestParam("file") MultipartFile file) {
+        ImportUsersResult result = userImportService.importUsers(file);
+        String message = result.failedCount() == 0
+                ? "Import danh sách tài khoản thành công"
+                : "Import hoàn tất, một số dòng không hợp lệ";
+        return ResponseEntity.ok(new ApiResponse<>(true, message, result));
     }
 
     @GetMapping

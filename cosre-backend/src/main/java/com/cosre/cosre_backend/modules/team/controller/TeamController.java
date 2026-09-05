@@ -31,8 +31,8 @@ public class TeamController {
     public ApiResponse<TeamResponse> get(@PathVariable Long id, Authentication auth) { return ok("Team loaded", TeamResponse.from(service.get(id, auth.getName()))); }
     @GetMapping("/available-students")
     @PreAuthorize("hasRole('LECTURER')")
-    public ApiResponse<List<TeamResponse.Person>> students(@RequestParam Long classroomId) {
-        return ok("Students loaded", service.availableStudents(classroomId).stream().map(user -> new TeamResponse.Person(user.getId(), user.getUsername(), user.getFullName(), user.getEmail())).toList());
+    public ApiResponse<List<TeamResponse.Person>> students(@RequestParam Long classroomId, Authentication auth) {
+        return ok("Students loaded", service.availableStudents(classroomId, auth.getName()).stream().map(user -> new TeamResponse.Person(user.getId(), user.getUsername(), user.getFullName(), user.getEmail())).toList());
     }
     @PostMapping
     @PreAuthorize("hasRole('LECTURER')")
@@ -54,5 +54,9 @@ public class TeamController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('LECTURER')")
     public ApiResponse<Void> delete(@PathVariable Long id, Authentication auth) { service.delete(id, auth.getName()); return ok("Team deleted", null); }
+    @GetMapping("/{id}/workspace") @PreAuthorize("hasAnyRole('LECTURER','STUDENT')")
+    public ApiResponse<TeamWorkspaceResponse> workspace(@PathVariable Long id, Authentication auth) { return ok("Workspace loaded", service.workspace(id, auth.getName())); }
+    @PutMapping("/{id}/milestones/{milestoneId}") @PreAuthorize("hasRole('STUDENT')")
+    public ApiResponse<TeamWorkspaceResponse> milestone(@PathVariable Long id, @PathVariable Long milestoneId, @RequestParam boolean done, Authentication auth) { return ok("Milestone updated", service.setMilestoneDone(id, milestoneId, done, auth.getName())); }
     private <T> ApiResponse<T> ok(String message, T data) { return new ApiResponse<>(true, message, data); }
 }

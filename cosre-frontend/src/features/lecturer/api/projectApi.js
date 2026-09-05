@@ -29,16 +29,18 @@
  * -------------------------------------------------------------------------
  */
 
-import apiClient from "../../../api/apiClient";
+import apiClient from "../../../config/axios";
 
 export async function fetchAssignedSubjects() {
-  const { data } = await apiClient.get("/lecturer/subjects");
-  return data;
+  const { data } = await apiClient.get("/subjects");
+  return (data.data || []).filter((subject) => subject.active);
 }
 
 export async function fetchSyllabus(subjectId) {
-  const { data } = await apiClient.get(`/subjects/${subjectId}/syllabus`);
-  return data;
+  const { data } = await apiClient.get('/syllabi', { params: { subjectId } });
+  const active = (data.data || []).find((item) => item.active);
+  if (!active) throw new Error('No active syllabus');
+  return active;
 }
 
 export async function generateMilestonesWithAI({ syllabusId, objectives }) {
@@ -50,13 +52,20 @@ export async function generateMilestonesWithAI({ syllabusId, objectives }) {
 }
 
 export async function createProject(payload) {
-  const { data } = await apiClient.post("/lecturer/projects", payload);
-  return data;
+  const { data } = await apiClient.post("/projects", {
+    ...payload,
+    subjectId: Number(payload.subjectId),
+    syllabusId: Number(payload.syllabusId),
+  });
+  return data.data;
 }
 
 export async function submitProjectForApproval(projectId) {
-  const { data } = await apiClient.post(
-    `/lecturer/projects/${projectId}/submit`
-  );
-  return data;
+  const { data } = await apiClient.post(`/projects/${projectId}/submit`);
+  return data.data;
+}
+
+export async function fetchMyProjects() {
+  const { data } = await apiClient.get("/projects/mine");
+  return data.data || [];
 }

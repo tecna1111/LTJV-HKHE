@@ -5,12 +5,14 @@ import com.cosre.cosre_backend.common.exception.BusinessRuleException;
 import com.cosre.cosre_backend.common.exception.ResourceNotFoundException;
 import com.cosre.cosre_backend.modules.account.entity.User;
 import com.cosre.cosre_backend.modules.account.repository.UserRepository;
+import com.cosre.cosre_backend.modules.classroom.entity.Classroom;
 import com.cosre.cosre_backend.modules.classroom.repository.ClassroomRepository;
 import com.cosre.cosre_backend.modules.resource.entity.ResourceCategory;
 import com.cosre.cosre_backend.modules.resource.entity.ResourceFile;
 import com.cosre.cosre_backend.modules.resource.repository.ResourceRepository;
 import com.cosre.cosre_backend.modules.team.repository.TeamRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,6 +31,7 @@ import java.util.UUID;
  * nộp. File vật lý được lưu trên ổ đĩa server tại thư mục cấu hình bởi
  * {@code app.upload.dir} (mặc định "uploads" ngay tại thư mục chạy app);
  * database chỉ lưu metadata (repository pattern giống các module khác).
+ * Kích thước file tối đa được giới hạn bởi {@code app.upload.max-file-size-bytes}.
  */
 @Service
 @Transactional
@@ -38,14 +41,17 @@ public class ResourceService {
     private final TeamRepository teamRepository;
     private final UserRepository userRepository;
     private final Path storageRoot;
+    private final long maxFileSizeBytes;
 
     public ResourceService(ResourceRepository resourceRepository, ClassroomRepository classroomRepository,
             TeamRepository teamRepository, UserRepository userRepository,
-            @Value("${app.upload.dir:uploads}") String uploadDir) {
+            @Value("${app.upload.dir:uploads}") String uploadDir,
+            @Value("${app.upload.max-file-size-bytes}") long maxFileSizeBytes) {
         this.resourceRepository = resourceRepository;
         this.classroomRepository = classroomRepository;
         this.teamRepository = teamRepository;
         this.userRepository = userRepository;
+        this.maxFileSizeBytes = maxFileSizeBytes;
         this.storageRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
         try {
             Files.createDirectories(storageRoot);
@@ -68,8 +74,19 @@ public class ResourceService {
         return store(file, title, description, ResourceCategory.TEAM_SUBMISSION, null, teamId, username);
     }
 
+    // Sinh viên chỉ xem được tài liệu của lớp mình đang theo học; các vai trò
+    // khác (Admin/Staff/Lecturer...) không bị giới hạn theo lớp.
     @Transactional(readOnly = true)
-    public List<ResourceFile> listByClassroom(Long classroomId) {
+    public List<ResourceFile> listByClassroom(Long classroomId, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (user.getRole() == RoleEnum.STUDENT) {
+            Classroom classroom = classroomRepository.findDetailedById(classroomId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Classroom not found"));
+            boolean enrolled = classroom.getStudents().stream()
+                    .anyMatch(s -> s.getUsername().equals(username));
+            if (!enrolled) throw new AccessDeniedException("You are not assigned to this classroom");
+        }
         return resourceRepository.findByClassroomIdOrderByCreatedAtDesc(classroomId);
     }
 
@@ -109,6 +126,10 @@ public class ResourceService {
     private ResourceFile store(MultipartFile file, String title, String description, ResourceCategory category,
             Long classroomId, Long teamId, String username) {
         if (file == null || file.isEmpty()) throw new BusinessRuleException("File is required");
+        if (file.getSize() > maxFileSizeBytes) {
+            throw new BusinessRuleException(
+                    "File exceeds the maximum allowed size of " + maxFileSizeBytes + " bytes");
+        }
         User uploader = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
