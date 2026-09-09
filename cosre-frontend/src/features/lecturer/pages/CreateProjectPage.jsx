@@ -7,7 +7,7 @@ import {
   generateMilestonesWithAI,
   createProject,
   submitProjectForApproval,
-  fetchMyProjects,
+  updateProject,
 } from "../api/projectApi";
 import { getApiError } from "../../../config/axios";
 import "../styles/CreateProjectPage.css";
@@ -44,11 +44,13 @@ export default function CreateProjectPage() {
 
   // Khi chọn môn học, tải đề cương tương ứng để dùng cho AI sinh mốc
   useEffect(() => {
+    let cancelled = false;
     if (!selectedSubjectId) {
       return;
     }
     fetchSyllabus(selectedSubjectId)
       .then((data) => {
+        if (cancelled) return;
         setSyllabus(data);
         // Gợi ý mục tiêu từ đề cương nếu Giảng viên chưa nhập gì
         if (objectives.length === 1 && objectives[0] === "" && data.objectives) {
@@ -56,9 +58,11 @@ export default function CreateProjectPage() {
         }
       })
       .catch(() => {
+        if (cancelled) return;
         setSyllabus(null);
         setSaveError("Môn học này chưa có đề cương đang hoạt động. Staff cần tạo đề cương trước.");
       });
+    return () => { cancelled = true; };
   }, [selectedSubjectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGenerateMilestonesAI = async () => {
@@ -102,7 +106,20 @@ export default function CreateProjectPage() {
     if (objectives.filter((o) => o.trim() !== "").length === 0)
       return "Vui lòng nhập ít nhất một mục tiêu.";
     if (milestones.length === 0) return "Vui lòng có ít nhất một cột mốc.";
+    for (const [index, milestone] of milestones.entries()) {
+      if (!milestone.title?.trim()) return `Vui lòng nhập tên cột mốc ${index + 1}.`;
+      if (!Number.isInteger(milestone.dueOffsetDays) || milestone.dueOffsetDays < 0)
+        return `Số ngày của cột mốc ${index + 1} phải là số nguyên không âm.`;
+    }
     return null;
+  };
+
+  const saveCurrentDraft = async () => {
+    const project = savedProject
+      ? await updateProject(savedProject.id, buildPayload())
+      : await createProject(buildPayload());
+    setSavedProject(project);
+    return project;
   };
 
   const handleSaveDraft = async () => {
@@ -115,8 +132,7 @@ export default function CreateProjectPage() {
     setSaveError(null);
     setSuccessMessage(null);
     try {
-      const project = await createProject(buildPayload());
-      setSavedProject(project);
+      await saveCurrentDraft();
       setSuccessMessage("Đã lưu bản nháp thành công.");
     } catch (error) {
       setSaveError(getApiError(error, "Lưu dự án thất bại. Vui lòng kiểm tra lại thông tin và thử lại."));
@@ -135,22 +151,7 @@ export default function CreateProjectPage() {
     setSaveError(null);
     setSuccessMessage(null);
     try {
-      let project = savedProject;
-      if (!project) {
-        try {
-          project = await createProject(buildPayload());
-          setSavedProject(project);
-        } catch (createError) {
-          if (createError.response?.status !== 409) throw createError;
-          const existing = (await fetchMyProjects()).find((item) =>
-            item.status === "DRAFT"
-            && item.subjectId === Number(selectedSubjectId)
-            && item.title.trim().toLowerCase() === title.trim().toLowerCase());
-          if (!existing) throw createError;
-          project = existing;
-          setSavedProject(existing);
-        }
-      }
+      const project = await saveCurrentDraft();
       const submitted = await submitProjectForApproval(project.id);
       setSavedProject(submitted);
       setSuccessMessage("Đã gửi dự án tới Trưởng bộ môn để phê duyệt.");
@@ -235,7 +236,7 @@ export default function CreateProjectPage() {
           type="button"
           className="btn-secondary"
           onClick={handleSaveDraft}
-          disabled={saving}
+          disabled={saving || (savedProject && savedProject.status !== "DRAFT")}
         >
           {saving ? "Đang lưu..." : "Lưu nháp"}
         </button>
@@ -243,7 +244,7 @@ export default function CreateProjectPage() {
           type="button"
           className="btn-primary"
           onClick={handleSubmitForApproval}
-          disabled={saving}
+          disabled={saving || (savedProject && savedProject.status !== "DRAFT")}
         >
           {saving ? "Đang gửi..." : "Gửi Trưởng bộ môn duyệt"}
         </button>
