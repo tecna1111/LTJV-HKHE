@@ -37,11 +37,11 @@ const ROLE_NAV = {
   ],
   LECTURER: [
     ['Tổng quan', LayoutDashboard], ['Lớp học', BookOpen], ['Dự án', FolderKanban, '/workflow'], ['Tạo dự án', Sparkles, '/lecturer/projects/new'], ['Nhóm sinh viên', Users, '/teams'],
-    ['Đánh giá', ClipboardCheck], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'], ['Lịch họp', Video],
+    ['Đánh giá chéo', ClipboardCheck, '/evaluations/summary'], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'], ['Lịch họp', Video],
   ],
   STUDENT: [
     ['Tổng quan', LayoutDashboard], ['Lớp học của tôi', BookOpen], ['Workspace nhóm', FolderKanban, '/student/teams'],
-    ['Nhiệm vụ', ClipboardCheck], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'],
+    ['Đánh giá chéo', ClipboardCheck, '/peer-evaluations'], ['Nhiệm vụ', ClipboardCheck], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'],
   ],
 };
 

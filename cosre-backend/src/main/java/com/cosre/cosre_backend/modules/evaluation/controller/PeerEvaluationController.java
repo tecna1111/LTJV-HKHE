@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/evaluations/peer")
+@RequestMapping("/api/v1/evaluations/peer")
 @RequiredArgsConstructor
 public class PeerEvaluationController {
 
