@@ -83,42 +83,6 @@ Password: Admin@123
 
 Đăng nhập thành công sẽ chuyển đến `/dashboard`.
 
-## Cấu hình Gemini cho module AI
-
-Phần này chỉ cần thiết khi phát triển hoặc demo chức năng của Dev 6. Hệ thống vẫn
-khởi động bình thường khi chưa cấu hình Gemini, nhưng chatbot sẽ không thể sinh câu
-trả lời.
-
-### Tạo Gemini API key
-
-Mỗi thành viên tự tạo key cá nhân tại
-[Google AI Studio](https://aistudio.google.com/apikey). Không chia sẻ key qua nhóm
-chat, không ghi key vào `application.properties` và không commit key lên Git.
-
-Lưu key vào biến môi trường người dùng trên Windows (thực hiện một lần):
-
-```powershell
-[Environment]::SetEnvironmentVariable(
-  "GEMINI_API_KEY",
-  "KEY_CÁ_NHÂN",
-  "User"
-)
-```
-
-Đóng PowerShell, mở cửa sổ mới và kiểm tra mà không in nội dung key:
-
-```powershell
-if ($env:GEMINI_API_KEY) {
-  "Đã cấu hình Gemini API key"
-} else {
-  "Chưa cấu hình Gemini API key"
-}
-```
-
-Sau khi cấu hình, chạy Backend và Frontend theo mục **Chạy web nhanh với H2** ở
-trên. Không cần tạo key mới cho mỗi lần chạy. Chỉ thay key khi key cũ bị lộ, bị thu
-hồi hoặc không còn sử dụng được.
-
 ## Cấu hình H2 Console
 
 Truy cập:
@@ -211,8 +175,6 @@ Không sử dụng password mặc định trong môi trường thật.
 | `DB_URL` | MySQL local | JDBC URL cho profile MySQL |
 | `DB_USERNAME` | `root` | Username MySQL |
 | `DB_PASSWORD` | Trống | Password MySQL |
-| `GEMINI_API_KEY` | Trống | API key dùng cho COSRE AI; không được commit |
-| `GEMINI_MODEL` | `gemini-2.5-flash` | Model Gemini được Backend sử dụng |
 
 ### Frontend
 

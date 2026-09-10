@@ -6,6 +6,8 @@ import DashboardPage from '../modules/dashboard/pages/DashboardPage';
 import SystemReportsPage from '../modules/report/pages/SystemReportsPage';
 import TeamManagementPage from '../modules/team/pages/TeamManagementPage';
 import CreateProjectPage from '../features/lecturer/pages/CreateProjectPage';
+import PeerEvaluationPage from '../modules/evaluation/pages/PeerEvaluationPage';
+import EvaluationSummaryPage from '../modules/evaluation/pages/EvaluationSummaryPage';
 import AccountImportPage from '../modules/account/pages/AccountImportPage';
 import SubjectListPage from '../modules/subject/pages/SubjectListPage';
 import ClassroomListPage from '../modules/classroom/pages/ClassroomListPage';
@@ -68,6 +70,38 @@ function AppRoutes() {
           element={
             <ProtectedRoute requiredRole="STAFF">
               <AccountImportPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/lecturer/projects/new"
+          element={
+            <ProtectedRoute requiredRole="LECTURER">
+              <CreateProjectPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teams"
+          element={
+            <ProtectedRoute requiredRole="LECTURER">
+              <TeamManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/peer-evaluations"
+          element={
+            <ProtectedRoute requiredRole="STUDENT">
+              <PeerEvaluationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/evaluations/summary"
+          element={
+            <ProtectedRoute requiredRole="LECTURER">
+              <EvaluationSummaryPage />
             </ProtectedRoute>
           }
         />
