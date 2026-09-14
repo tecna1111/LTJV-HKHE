@@ -48,7 +48,7 @@ export async function generateMilestonesWithAI({ syllabusId, objectives }) {
     syllabusId,
     objectives,
   });
-  return data.milestones;
+  return data.data.milestones;
 }
 
 export async function createProject(payload) {
@@ -62,6 +62,15 @@ export async function createProject(payload) {
 
 export async function submitProjectForApproval(projectId) {
   const { data } = await apiClient.post(`/projects/${projectId}/submit`);
+  return data.data;
+}
+
+export async function updateProject(projectId, payload) {
+  const { data } = await apiClient.put(`/projects/${projectId}`, {
+    ...payload,
+    subjectId: Number(payload.subjectId),
+    syllabusId: Number(payload.syllabusId),
+  });
   return data.data;
 }
 
