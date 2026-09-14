@@ -28,6 +28,7 @@ class NotificationServiceTests {
     @Mock TeamRepository teamRepository;
     @Mock ClassroomRepository classroomRepository;
     @Mock SimpMessagingTemplate messagingTemplate;
+    @Mock EmailDeliveryService emailDeliveryService;
 
     @Test
     void listsNotificationsAndUnreadCountForAuthenticatedUser() {
@@ -65,7 +66,7 @@ class NotificationServiceTests {
     }
 
     private NotificationService service() {
-        return new NotificationService(repository, userRepository, teamRepository, classroomRepository, messagingTemplate);
+        return new NotificationService(repository, userRepository, teamRepository, classroomRepository, messagingTemplate, emailDeliveryService);
     }
 
     private User user(Long id, String username, String name) {
