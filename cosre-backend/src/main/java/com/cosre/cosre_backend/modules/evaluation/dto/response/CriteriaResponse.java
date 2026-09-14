@@ -22,4 +22,8 @@ public class CriteriaResponse {
     private BigDecimal maxScore;
     private BigDecimal weight;
     private LocalDateTime createdAt;
+
+    // true nếu tiêu chí đã có >=1 bài đánh giá sử dụng => không thể đổi weight/maxScore
+    // hoặc xóa nữa (chỉ còn sửa được tiêu đề/mô tả). FE dùng để khóa các field tương ứng.
+    private boolean locked;
 }

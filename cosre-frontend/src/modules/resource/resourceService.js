@@ -44,3 +44,10 @@ export const downloadResource = async (id, fileName) => {
   link.remove();
   window.URL.revokeObjectURL(url);
 };
+
+export const updateResourceMetadata = async (id, payload) => (await api.put(`/resources/${id}/metadata`, payload)).data.data;
+// Checkpoint module currently uses /api/checkpoints, outside the /api/v1 base.
+export const getResourceCheckpoints = async teamId => {
+  const base = api.defaults.baseURL.replace(/\/v1\/?$/, '');
+  return (await api.get(`${base}/checkpoints/team/${teamId}`)).data;
+};

@@ -1,3 +1,6 @@
+import CriteriaManagementPage from '../modules/evaluation/pages/CriteriaManagementPage';
+import FinalEvaluationPage from '../modules/evaluation/pages/FinalEvaluationPage';
+import AnswerFeedbackPage from '../modules/evaluation/pages/AnswerFeedbackPage';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import LoginPage from '../modules/authentication/pages/LoginPage';
 import UserManagementPage from '../modules/account/pages/UserManagementPage';
@@ -25,6 +28,10 @@ function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/evaluations/criteria" element={<ProtectedRoute requiredRole="LECTURER"><CriteriaManagementPage /></ProtectedRoute>} />
+        <Route path="/evaluations/final" element={<ProtectedRoute><FinalEvaluationPage /></ProtectedRoute>} />
+        <Route path="/evaluations/feedback" element={<ProtectedRoute><AnswerFeedbackPage /></ProtectedRoute>} />
+        <Route path="/incidents" element={<ProtectedRoute><SystemReportsPage /></ProtectedRoute>} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />

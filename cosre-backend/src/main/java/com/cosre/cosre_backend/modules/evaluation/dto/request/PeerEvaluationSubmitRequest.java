@@ -29,11 +29,12 @@ public class PeerEvaluationSubmitRequest {
     @NotNull(message = "evaluateeId không được để trống")
     private Long evaluateeId;
 
+    @jakarta.validation.constraints.Size(max = 500)
     private String comment;
 
     @NotEmpty(message = "Phải chấm ít nhất 1 tiêu chí")
     @Valid
-    private List<DetailItem> details;
+    private List<@NotNull DetailItem> details;
 
     @Getter
     @Setter
@@ -44,8 +45,11 @@ public class PeerEvaluationSubmitRequest {
         private Long criteriaId;
 
         @NotNull(message = "score không được để trống")
+        @jakarta.validation.constraints.DecimalMin("0")
+        @jakarta.validation.constraints.Digits(integer = 3, fraction = 2)
         private BigDecimal score;
 
-        private String comment;
+        @jakarta.validation.constraints.Size(max = 500)
+    private String comment;
     }
 }

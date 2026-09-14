@@ -21,7 +21,7 @@ import java.util.List;
     name = "peer_evaluation",
     uniqueConstraints = @UniqueConstraint(
         name = "uk_peer_evaluation_unique",
-        columnNames = {"evaluator_id", "evaluatee_id", "project_id", "milestone_id"}
+        columnNames = {"evaluator_id", "evaluatee_id", "project_id", "team_id", "milestone_id"}
     )
 )
 @Getter
