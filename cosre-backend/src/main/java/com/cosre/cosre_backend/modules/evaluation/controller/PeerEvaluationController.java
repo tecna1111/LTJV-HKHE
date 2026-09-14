@@ -81,6 +81,11 @@ public class PeerEvaluationController {
         return ApiResponse.success(null, "Final evaluation opened");
     }
 
+    @GetMapping("/round")
+    public ApiResponse<com.cosre.cosre_backend.modules.evaluation.entity.EvaluationRound> round(@RequestParam Long teamId, @RequestParam Long projectId) {
+        return ApiResponse.success(peerEvaluationService.getRound(teamId, projectId));
+    }
+
     private Long currentUserId(Authentication authentication) {
         return accountService.findByUsername(authentication.getName())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"))

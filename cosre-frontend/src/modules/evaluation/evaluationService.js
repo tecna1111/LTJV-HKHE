@@ -27,3 +27,13 @@ export const getTeamSummary = async (teamId, projectId, memberIds) =>
 
 export const lockTeamEvaluations = async (teamId, projectId) =>
   (await api.post('/evaluations/peer/lock', null, { params: { teamId, projectId } })).data;
+
+export const createCriteria = async payload => (await api.post('/evaluations/criteria', payload)).data.data;
+export const updateCriteria = async (id, payload) => (await api.put(`/evaluations/criteria/${id}`, payload)).data.data;
+export const deleteCriteria = async id => (await api.delete(`/evaluations/criteria/${id}`)).data;
+export const getRound = async (teamId, projectId) => (await api.get('/evaluations/peer/round', { params: { teamId, projectId } })).data.data;
+export const openFinal = async (teamId, projectId) => (await api.post('/evaluations/peer/open-final', null, { params: { teamId, projectId } })).data;
+export const getFinalGrades = async (teamId, projectId) => (await api.get('/evaluations/final', { params: { teamId, projectId } })).data.data;
+export const saveFinalGrade = async payload => (await api.put('/evaluations/final', payload)).data.data;
+export const getAnswerFeedback = async id => (await api.get(`/evaluations/answers/${id}/peer-feedback`)).data.data;
+export const saveAnswerFeedback = async (id, feedback) => (await api.put(`/evaluations/answers/${id}/peer-feedback`, { feedback })).data.data;

@@ -43,6 +43,14 @@ public class PeerEvaluationServiceImpl implements PeerEvaluationService {
         });
     }
 
+    @Override
+    public com.cosre.cosre_backend.modules.evaluation.entity.EvaluationRound getRound(Long teamId, Long projectId) {
+        var team = access.team(teamId, projectId);
+        var user = access.currentUser();
+        if (!team.getLecturer().getId().equals(user.getId())) access.member(team, user.getId());
+        return round(teamId, projectId);
+    }
+
     @Transactional
     public void openFinal(Long teamId, Long projectId) {
         access.lockProject(projectId);

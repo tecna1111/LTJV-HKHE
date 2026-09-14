@@ -1,237 +1,66 @@
-import { useEffect, useMemo, useState } from 'react';
-import {
-  BookOpenCheck, Download, FileText, FolderKanban, LogOut, Trash2, Upload, Users,
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import BrandLogo from '../../../components/BrandLogo';
-import { getApiError } from '../../../config/axios';
+import { useCallback, useState } from 'react';
+import ModuleLayout from '../../../components/workspace/ModuleLayout';
+import Notice from '../../../components/workspace/Notice';
+import useRemote from '../../../components/workspace/useRemote';
 import useAuthStore from '../../../store/useAuthStore';
+import { getApiError } from '../../../config/axios';
 import { getClassrooms } from '../../classroom/classroomService';
-import { getTeams } from '../../team/teamService';
-import {
-  getClassroomResources, getTeamResources, uploadClassroomResource, uploadTeamResource,
-  deleteResource, downloadResource,
-} from '../resourceService';
-import './ResourceLibraryPage.css';
-
-const TABS = [
-  { id: 'classroom', label: 'Tài liệu môn học', icon: BookOpenCheck },
-  { id: 'team', label: 'File bài nộp nhóm', icon: Users },
-];
-
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+import { getTeams, getTeamWorkspace } from '../../team/teamService';
+import { getClassroomResources, getTeamResources, uploadClassroomResource, uploadTeamResource, deleteResource, downloadResource, updateResourceMetadata, getResourceCheckpoints } from '../resourceService';
+function Metadata({ resource, milestones, checkpoints, onSaved, onCancel }) {
+  const [title, setTitle] = useState(resource.title);
+  const [description, setDescription] = useState(resource.description || '');
+  const [milestoneId, setMilestone] = useState(String(resource.milestoneId || ''));
+  const [checkpointId, setCheckpoint] = useState(String(resource.checkpointId || ''));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  async function save(e) {
+    e.preventDefault();setBusy(true);setError('');
+    try { await updateResourceMetadata(resource.id, { title: title.trim(), description, milestoneId: milestoneId ? Number(milestoneId) : null, checkpointId: checkpointId ? Number(checkpointId) : null });onSaved(); }
+    catch (err) { setError(getApiError(err, 'Không thể cập nhật thông tin file.')); } finally { setBusy(false); }
+  }
+  return <form className="dm-panel" onSubmit={save}><h2>Sửa thông tin: {resource.originalFileName}</h2><Notice error={error} /><fieldset disabled={busy}><label>Tiêu đề<input required maxLength={255} value={title} onChange={e => setTitle(e.target.value)} /></label><label>Mô tả<textarea maxLength={1000} value={description} onChange={e => setDescription(e.target.value)} /></label>
+    {resource.teamId && <><label>Milestone<select value={milestoneId} disabled={!!checkpointId} onChange={e => setMilestone(e.target.value)}><option value="">Không liên kết</option>{milestones.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}</select></label><label>Checkpoint<select value={checkpointId} onChange={e => { setCheckpoint(e.target.value); if (e.target.value) setMilestone(String(checkpoints.find(c => String(c.id) === e.target.value)?.milestoneId || '')); }}><option value="">Không liên kết</option>{checkpoints.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}</select></label></>}
+    <div className="dm-actions"><button className="primary" disabled={!title.trim()}>{busy ? 'Đang lưu…' : 'Lưu thông tin'}</button><button type="button" onClick={onCancel}>Hủy</button></div></fieldset></form>;
 }
-
-function ResourceLibraryPage() {
-  const navigate = useNavigate();
-  const { fullName, username, clearAuth } = useAuthStore();
-  const role = useAuthStore((state) => state.role);
-
-  const [tab, setTab] = useState('classroom');
-  const [classrooms, setClassrooms] = useState([]);
-  const [teams, setTeams] = useState([]);
-  const [selectedClassroomId, setSelectedClassroomId] = useState('');
-  const [selectedTeamId, setSelectedTeamId] = useState('');
-
-  const [resources, setResources] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [feedback, setFeedback] = useState({ type: '', text: '' });
-
-  const [file, setFile] = useState(null);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-
-  // Tải danh sách lớp học và nhóm (của giảng viên hiện tại) khi vào trang.
-  useEffect(() => {
-    getClassrooms()
-      .then((result) => setClassrooms(result.data || []))
-      .catch((error) => setFeedback({ type: 'error', text: getApiError(error, 'Không thể tải danh sách lớp học.') }));
-    if (role === 'LECTURER' || role === 'STUDENT') {
-      getTeams()
-        .then((result) => setTeams(result.data || []))
-        .catch((error) => setFeedback({ type: 'error', text: getApiError(error, 'Không thể tải danh sách nhóm.') }));
-    }
-  }, [role]);
-
-  const selectedId = tab === 'classroom' ? selectedClassroomId : selectedTeamId;
-
-  const loadResources = () => {
-    if (!selectedId) { setResources([]); return; }
-    setLoading(true);
-    const request = tab === 'classroom' ? getClassroomResources(selectedId) : getTeamResources(selectedId);
-    request
-      .then((result) => setResources(result.data || []))
-      .catch((error) => setFeedback({ type: 'error', text: getApiError(error, 'Không thể tải danh sách tài nguyên.') }))
-      .finally(() => setLoading(false));
-  };
-
-  // Đồng bộ danh sách file khi người dùng đổi phạm vi lớp/nhóm.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { loadResources(); }, [tab, selectedClassroomId, selectedTeamId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const resetUploadForm = () => { setFile(null); setTitle(''); setDescription(''); };
-
-  const handleUpload = async (event) => {
-    event.preventDefault();
-    if (!selectedId) { setFeedback({ type: 'error', text: tab === 'classroom' ? 'Vui lòng chọn lớp học.' : 'Vui lòng chọn nhóm.' }); return; }
-    if (!file) { setFeedback({ type: 'error', text: 'Vui lòng chọn file để tải lên.' }); return; }
-    setUploading(true);
-    setFeedback({ type: '', text: '' });
-    try {
-      if (tab === 'classroom') await uploadClassroomResource(selectedId, file, title, description);
-      else await uploadTeamResource(selectedId, file, title, description);
-      resetUploadForm();
-      setFeedback({ type: 'success', text: 'Tải file lên thành công.' });
-      loadResources();
-    } catch (error) {
-      setFeedback({ type: 'error', text: getApiError(error, 'Tải file lên thất bại.') });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDownload = async (resource) => {
-    try {
-      await downloadResource(resource.id, resource.originalFileName);
-    } catch (error) {
-      setFeedback({ type: 'error', text: getApiError(error, 'Không thể tải file này.') });
-    }
-  };
-
-  const handleDelete = async (resource) => {
-    if (!window.confirm(`Xóa "${resource.title}"? Hành động này không thể hoàn tác.`)) return;
-    try {
-      await deleteResource(resource.id);
-      setFeedback({ type: 'success', text: 'Đã xóa resource.' });
-      loadResources();
-    } catch (error) {
-      setFeedback({ type: 'error', text: getApiError(error, 'Không thể xóa resource này.') });
-    }
-  };
-
-  const logout = () => { clearAuth(); navigate('/login', { replace: true }); };
-
-  const teamOptions = useMemo(() => teams, [teams]);
-  const tabs = role === 'LECTURER' || role === 'STUDENT' ? TABS : TABS.slice(0, 1);
-  const canUpload = tab === 'team'
-    ? role === 'LECTURER' || role === 'STUDENT'
-    : role === 'ADMIN' || role === 'STAFF' || role === 'LECTURER';
-
-  return (
-    <main className="resource-shell">
-      <aside className="resource-sidebar">
-        <BrandLogo />
-        <nav>
-          {tabs.map(({ id, label, icon: Icon }) => (
-            <button type="button" key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
-              <Icon size={18} /> {label}
-            </button>
-          ))}
-        </nav>
-        <button type="button" className="resource-logout" onClick={logout}><LogOut size={18} /> Đăng xuất</button>
-      </aside>
-
-      <section className="resource-main">
-        <header className="resource-topbar">
-          <div><small>COLLABSPHERE / RESOURCES</small><strong>{fullName || username}</strong></div>
-        </header>
-
-        <div className="resource-content">
-          <div className="resource-heading">
-            <h1>{tab === 'classroom' ? 'Tài liệu môn học' : 'File bài nộp nhóm'}</h1>
-            <p>{tab === 'classroom'
-              ? 'Tải lên và quản lý tài liệu học tập cho từng lớp học.'
-              : 'Xem và quản lý file bài nộp của các nhóm sinh viên.'}</p>
-          </div>
-
-          {feedback.text && <div className={`resource-feedback ${feedback.type}`}>{feedback.text}</div>}
-
-          <div className="resource-selector">
-            {tab === 'classroom' ? (
-              <select value={selectedClassroomId} onChange={(e) => setSelectedClassroomId(e.target.value)}>
-                <option value="">-- Chọn lớp học --</option>
-                {classrooms.map((c) => <option key={c.id} value={c.id}>{c.code} - {c.name}</option>)}
-              </select>
-            ) : (
-              <select value={selectedTeamId} onChange={(e) => setSelectedTeamId(e.target.value)}>
-                <option value="">-- Chọn nhóm --</option>
-                {teamOptions.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            )}
-          </div>
-
-          {selectedId && canUpload && (
-            <form className="resource-upload-form" onSubmit={handleUpload}>
-              <input
-                type="file"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-              />
-              <input
-                type="text"
-                placeholder="Tiêu đề (tùy chọn, mặc định lấy tên file)"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder="Mô tả ngắn (tùy chọn)"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-              <button type="submit" disabled={uploading}>
-                <Upload size={16} /> {uploading ? 'Đang tải lên...' : 'Tải lên'}
-              </button>
-            </form>
-          )}
-
-          {!selectedId && (
-            <div className="resource-empty">
-              <FolderKanban size={32} />
-              <p>{tab === 'classroom' ? 'Chọn một lớp học để xem tài liệu.' : 'Chọn một nhóm để xem file bài nộp.'}</p>
-            </div>
-          )}
-
-          {selectedId && loading && <p className="resource-loading">Đang tải danh sách...</p>}
-
-          {selectedId && !loading && resources.length === 0 && (
-            <div className="resource-empty">
-              <FileText size={32} />
-              <p>Chưa có file nào.</p>
-            </div>
-          )}
-
-          {selectedId && !loading && resources.length > 0 && (
-            <ul className="resource-list">
-              {resources.map((resource) => (
-                <li key={resource.id} className="resource-item">
-                  <FileText size={20} className="resource-item-icon" />
-                  <div className="resource-item-info">
-                    <strong>{resource.title}</strong>
-                    <small>
-                      {resource.originalFileName} · {formatSize(resource.fileSize)} · {resource.uploadedBy?.fullName || 'Không rõ'}
-                    </small>
-                    {resource.description && <p>{resource.description}</p>}
-                  </div>
-                  <div className="resource-item-actions">
-                    <button type="button" onClick={() => handleDownload(resource)} title="Tải về">
-                      <Download size={16} />
-                    </button>
-                    <button type="button" onClick={() => handleDelete(resource)} title="Xóa" className="danger">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
-    </main>
-  );
+function Files({ scope, type, canUpload }) {
+  const { role, username } = useAuthStore();
+  const loader = useCallback(() => (type === 'team' ? getTeamResources(scope.id) : getClassroomResources(scope.id)).then(r => r.data), [type, scope.id]);
+  const { data, loading, error, reload } = useRemote(loader);
+  const linksLoader = useCallback(async () => {
+    if (type !== 'team') return { milestones: [], checkpoints: [], warning: '' };
+    const [workspace, checkpoints] = await Promise.allSettled([getTeamWorkspace(scope.id), getResourceCheckpoints(scope.id)]);
+    return { milestones: workspace.status === 'fulfilled' ? workspace.value.project?.milestones || [] : [], checkpoints: checkpoints.status === 'fulfilled' ? checkpoints.value : [], warning: workspace.status === 'rejected' || checkpoints.status === 'rejected' ? 'Không tải đủ milestone/checkpoint. Thử tải lại trước khi sửa liên kết.' : '' };
+  }, [type, scope.id]);
+  const links = useRemote(linksLoader);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState({});
+  const [editing, setEditing] = useState(null);
+  const canManage = r => ['ADMIN','STAFF'].includes(role) || r.uploadedBy?.username === username || (role === 'LECTURER' && (type === 'team' ? scope.lecturer?.username === username : scope.lecturers?.some(l => l.username === username)));
+  async function upload(e) {
+    e.preventDefault(); const form = e.currentTarget; const fields = new FormData(form); const file = fields.get('file');
+    setBusy(true);setNotice({});
+    try { await (type === 'team' ? uploadTeamResource : uploadClassroomResource)(scope.id, file, fields.get('title'), fields.get('description'));form.reset();reload();setNotice({ message: 'Đã tải file lên. Chọn Sửa thông tin để gắn milestone/checkpoint.' }); }
+    catch (err) { setNotice({ error: getApiError(err, 'Không thể tải file lên.') }); } finally { setBusy(false); }
+  }
+  async function action(file, remove) {
+    if (remove && !window.confirm(`Xóa “${file.title}”?`)) return;
+    setBusy(true);setNotice({});
+    try { if (remove) { await deleteResource(file.id);reload();setNotice({ message: 'Đã xóa file.' }); } else await downloadResource(file.id, file.originalFileName); }
+    catch (err) { setNotice({ error: getApiError(err, 'Không thể thực hiện thao tác.') }); } finally { setBusy(false); }
+  }
+  return <><Notice error={error || notice.error} message={notice.message} />{canUpload && <form className="dm-panel" onSubmit={upload}><h2>Tải file lên</h2><fieldset disabled={busy}><label>File<input required name="file" type="file" /></label><label>Tiêu đề<input name="title" maxLength={255} placeholder="Mặc định lấy tên file" /></label><label>Mô tả<textarea name="description" maxLength={1000} /></label><button className="primary">{busy ? 'Đang xử lý…' : 'Tải lên'}</button></fieldset></form>}
+    {(links.error || links.data?.warning) && <div className="dm-notice error" role="alert">{links.error || links.data.warning}<button onClick={links.reload}>Tải lại liên kết</button></div>}
+    {editing && <Metadata key={editing.id} resource={editing} milestones={links.data?.milestones || []} checkpoints={links.data?.checkpoints || []} onCancel={() => setEditing(null)} onSaved={() => { setEditing(null);reload();setNotice({ message: 'Đã lưu thông tin.' }); }} />}
+    <section className="dm-panel"><div className="dm-actions"><h2>Danh sách file</h2><button disabled={loading || busy} onClick={reload}>Làm mới</button></div>{loading ? <p>Đang tải file…</p> : !error && data?.length === 0 ? <p>Chưa có file nào.</p> : data?.map(r => <article key={r.id} className="dm-card"><h3>{r.title}</h3><p className="dm-muted">{r.originalFileName} · {(r.fileSize / 1024).toFixed(1)} KB · {r.uploadedBy?.fullName}</p><p>{r.description}</p>{r.milestoneId && <p>Milestone: {links.data?.milestones.find(m => m.id === r.milestoneId)?.title || `#${r.milestoneId}`}</p>}{r.checkpointId && <p>Checkpoint: {links.data?.checkpoints.find(c => c.id === r.checkpointId)?.title || `#${r.checkpointId}`}</p>}<div className="dm-actions"><button disabled={busy} onClick={() => action(r, false)}>Tải về</button>{canManage(r) && <><button disabled={busy || links.loading || !!links.error || !!links.data?.warning} onClick={() => setEditing(r)}>Sửa thông tin</button><button className="danger" disabled={busy} onClick={() => action(r, true)}>Xóa</button></>}</div></article>)}</section></>;
 }
-
-export default ResourceLibraryPage;
+export default function ResourceLibraryPage() {
+  const { role, username } = useAuthStore();
+  const [type, setType] = useState('classroom');
+  const [id, setId] = useState('');
+  const loader = useCallback(() => (type === 'team' ? getTeams() : getClassrooms()).then(r => r.data), [type]);
+  const { data, loading, error, reload } = useRemote(loader);
+  const scope = data?.find(s => String(s.id) === id);
+  const canUpload = scope && (type === 'team' ? ['LECTURER','STUDENT'].includes(role) : ['ADMIN','STAFF'].includes(role) || role === 'LECTURER' && scope.lecturers?.some(l => l.username === username));
+  return <ModuleLayout title="Thư viện tài nguyên" description="Quản lý tài liệu lớp học và file bài nộp của nhóm."><Notice error={error} />{error && <button onClick={reload}>Thử lại</button>}<div className="dm-grid"><label>Phạm vi<select value={type} onChange={e => { setType(e.target.value);setId(''); }}><option value="classroom">Lớp học</option>{['STUDENT','LECTURER'].includes(role) && <option value="team">Nhóm</option>}</select></label><label>{type === 'team' ? 'Nhóm' : 'Lớp học'}<select disabled={loading} value={id} onChange={e => setId(e.target.value)}><option value="">{loading ? 'Đang tải…' : 'Chọn phạm vi'}</option>{(data || []).map(s => <option key={s.id} value={s.id}>{s.code ? `${s.code} — ` : ''}{s.name}</option>)}</select></label></div>{scope && <Files key={`${type}:${id}`} type={type} scope={scope} canUpload={canUpload} />}</ModuleLayout>;
+}

@@ -28,18 +28,22 @@ const ROLE_NAV = {
     ['Tổng quan', LayoutDashboard], ['Tài khoản', Users, '/admin/users'], ['Báo cáo sự cố', CircleAlert, '/admin/reports'],
   ],
   HEAD_DEPT: [
+    ['Báo cáo sự cố', CircleAlert, '/incidents'],
     ['Tổng quan', LayoutDashboard], ['Dự án chờ duyệt', ClipboardCheck, '/workflow?status=PENDING'], ['Dự án đã duyệt', FolderKanban, '/workflow?status=APPROVED'],
     ['Lớp học', BookOpen, '/classrooms'], ['Phân công dự án', Users], ['Báo cáo', BarChart3],
   ],
   STAFF: [
+    ['Báo cáo sự cố', CircleAlert, '/incidents'],
     ['Tổng quan', LayoutDashboard, '/dashboard'], ['Môn học', BookOpen, '/staff/subjects'], ['Đề cương', FileUp, '/workflow'],
     ['Lớp học & thành viên', Building2, '/staff/classrooms'], ['Tài nguyên', GraduationCap, '/resources'], ['Tài khoản', Users, '/staff/accounts/import'],
   ],
   LECTURER: [
+    ['Quản lý tiêu chí', ClipboardCheck, '/evaluations/criteria'], ['Đánh giá cuối dự án', ClipboardCheck, '/evaluations/final'], ['Phản hồi câu trả lời', MessageSquare, '/evaluations/feedback'], ['Báo cáo sự cố', CircleAlert, '/incidents'],
     ['Tổng quan', LayoutDashboard], ['Lớp học', BookOpen, '/classrooms'], ['Dự án', FolderKanban, '/workflow'], ['Tạo dự án', Sparkles, '/lecturer/projects/new'], ['Nhóm sinh viên', Users, '/teams'],
     ['Đánh giá chéo', ClipboardCheck, '/evaluations/summary'], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'], ['Lịch họp', Video],
   ],
   STUDENT: [
+    ['Kết quả cuối dự án', ClipboardCheck, '/evaluations/final'], ['Phản hồi câu trả lời', MessageSquare, '/evaluations/feedback'], ['Báo cáo sự cố', CircleAlert, '/incidents'],
     ['Tổng quan', LayoutDashboard], ['Lớp học của tôi', BookOpen, '/classrooms'], ['Workspace nhóm', FolderKanban, '/student/teams'],
     ['Đánh giá chéo', ClipboardCheck, '/peer-evaluations'], ['Nhiệm vụ', ClipboardCheck], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'],
   ],
