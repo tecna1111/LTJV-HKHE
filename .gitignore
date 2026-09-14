@@ -1,0 +1,17 @@
+# IDE Files
+.idea/
+*.iml
+.vscode/
+
+# Java Build
+**/target/
+.m2/
+*.class
+
+# Node Build
+**/node_modules/
+**/dist/
+
+# Misc
+*.log
+.env
