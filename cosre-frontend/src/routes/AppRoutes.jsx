@@ -11,7 +11,9 @@ import EvaluationSummaryPage from '../modules/evaluation/pages/EvaluationSummary
 import AccountImportPage from '../modules/account/pages/AccountImportPage';
 import SubjectListPage from '../modules/subject/pages/SubjectListPage';
 import ClassroomListPage from '../modules/classroom/pages/ClassroomListPage';
+import MyClassroomsPage from '../modules/classroom/pages/MyClassroomsPage';
 import ClassroomDetailPage from '../modules/classroom/pages/ClassroomDetailPage';
+import ClassroomImportPage from '../modules/classroom/pages/ClassroomImportPage';
 import ProjectWorkflowPage from '../modules/workflow/pages/ProjectWorkflowPage';
 import TeamWorkspacePage from '../modules/team/pages/TeamWorkspacePage';
 import WhiteboardPage from '../modules/collaboration/pages/WhiteboardPage';
@@ -27,6 +29,7 @@ function AppRoutes() {
         <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/workflow" element={<ProtectedRoute><ProjectWorkflowPage /></ProtectedRoute>} />
+        <Route path="/classrooms" element={<ProtectedRoute><MyClassroomsPage /></ProtectedRoute>} />
         <Route path="/teams/:id/workspace" element={<ProtectedRoute><TeamWorkspacePage /></ProtectedRoute>} />
         <Route path="/teams/:id/whiteboard" element={<ProtectedRoute><WhiteboardPage /></ProtectedRoute>} />
         <Route path="/student/teams" element={<ProtectedRoute requiredRole="STUDENT"><StudentTeamsPage /></ProtectedRoute>} />
@@ -55,6 +58,10 @@ function AppRoutes() {
         <Route
           path="/staff/classrooms"
           element={<ProtectedRoute requiredRole="STAFF"><ClassroomListPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/staff/classrooms/import"
+          element={<ProtectedRoute requiredRole="STAFF"><ClassroomImportPage /></ProtectedRoute>}
         />
         <Route
           path="/staff/classrooms/:id"

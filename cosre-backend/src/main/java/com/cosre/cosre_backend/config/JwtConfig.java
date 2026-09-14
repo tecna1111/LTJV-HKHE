@@ -22,6 +22,9 @@ public class JwtConfig {
     @Value("${security.jwt.expiration-ms:86400000}")
     private long expirationMs;
 
+    @Value("${security.jwt.refresh-expiration-ms:604800000}")
+    private long refreshExpirationMs;
+
     private Key key;
 
     @PostConstruct
@@ -30,12 +33,21 @@ public class JwtConfig {
     }
 
     public String generateToken(String username, RoleEnum role) {
+        return generateToken(username, role, "access", expirationMs);
+    }
+
+    public String generateRefreshToken(String username, RoleEnum role) {
+        return generateToken(username, role, "refresh", refreshExpirationMs);
+    }
+
+    private String generateToken(String username, RoleEnum role, String type, long lifetime) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + expirationMs);
+        Date expiryDate = new Date(now.getTime() + lifetime);
 
         return Jwts.builder()
                 .setSubject(username)
                 .claim("role", role.name())
+                .claim("type", type)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(key)
@@ -58,6 +70,18 @@ public class JwtConfig {
     public RoleEnum getRole(String token) {
         String role = parseClaims(token).getBody().get("role", String.class);
         return role != null ? RoleEnum.valueOf(role) : null;
+    }
+
+    public boolean isAccessToken(String token) {
+        return "access".equals(parseClaims(token).getBody().get("type", String.class));
+    }
+
+    public boolean isRefreshToken(String token) {
+        return "refresh".equals(parseClaims(token).getBody().get("type", String.class));
+    }
+
+    public long getExpirationMs() {
+        return expirationMs;
     }
 
     private Jws<Claims> parseClaims(String token) {

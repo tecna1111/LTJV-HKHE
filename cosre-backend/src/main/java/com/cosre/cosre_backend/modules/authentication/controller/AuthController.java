@@ -4,6 +4,7 @@ import com.cosre.cosre_backend.common.dto.ApiResponse;
 import com.cosre.cosre_backend.modules.authentication.dto.LoginRequest;
 import com.cosre.cosre_backend.modules.authentication.dto.LoginResponse;
 import com.cosre.cosre_backend.modules.authentication.dto.CurrentUserResponse;
+import com.cosre.cosre_backend.modules.authentication.dto.RefreshTokenRequest;
 import com.cosre.cosre_backend.modules.authentication.service.AuthService;
 import com.cosre.cosre_backend.modules.account.service.AccountService;
 import jakarta.validation.Valid;
@@ -22,6 +23,14 @@ public class AuthController {
     public AuthController(AuthService authService, AccountService accountService) {
         this.authService = authService;
         this.accountService = accountService;
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<LoginResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return authService.refresh(request.refreshToken())
+                .map(response -> ResponseEntity.ok(new ApiResponse<>(true, "Token refreshed", response)))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new ApiResponse<>(false, "Invalid or expired refresh token", null)));
     }
 
     @PostMapping("/login")

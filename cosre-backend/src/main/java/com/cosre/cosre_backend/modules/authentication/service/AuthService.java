@@ -5,6 +5,7 @@ import com.cosre.cosre_backend.common.constants.RoleEnum;
 import com.cosre.cosre_backend.modules.account.entity.User;
 import com.cosre.cosre_backend.modules.account.repository.UserRepository;
 import com.cosre.cosre_backend.modules.authentication.dto.LoginResponse;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -36,7 +37,30 @@ public class AuthService {
             return Optional.empty();
         }
 
-        String token = jwtConfig.generateToken(user.getUsername(), user.getRole());
-        return Optional.of(new LoginResponse(token, user.getUsername(), user.getFullName(), user.getRole().name()));
+        return Optional.of(createSession(user));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<LoginResponse> refresh(String refreshToken) {
+        if (!jwtConfig.validateToken(refreshToken) || !jwtConfig.isRefreshToken(refreshToken)) {
+            return Optional.empty();
+        }
+
+        return userRepository.findByUsername(jwtConfig.getUsername(refreshToken))
+                .filter(User::isActive)
+                .filter(user -> user.getRole() == jwtConfig.getRole(refreshToken))
+                .map(this::createSession);
+    }
+
+    private LoginResponse createSession(User user) {
+        String accessToken = jwtConfig.generateToken(user.getUsername(), user.getRole());
+        String refreshToken = jwtConfig.generateRefreshToken(user.getUsername(), user.getRole());
+        return new LoginResponse(
+                accessToken,
+                refreshToken,
+                jwtConfig.getExpirationMs(),
+                user.getUsername(),
+                user.getFullName(),
+                user.getRole().name());
     }
 }
