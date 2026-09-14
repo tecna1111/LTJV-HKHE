@@ -28,22 +28,22 @@ const ROLE_NAV = {
     ['Tổng quan', LayoutDashboard], ['Tài khoản', Users, '/admin/users'], ['Báo cáo sự cố', CircleAlert, '/admin/reports'],
   ],
   HEAD_DEPT: [
-    ['Báo cáo sự cố', CircleAlert, '/incidents'],
+
     ['Tổng quan', LayoutDashboard], ['Dự án chờ duyệt', ClipboardCheck, '/workflow?status=PENDING'], ['Dự án đã duyệt', FolderKanban, '/workflow?status=APPROVED'],
     ['Lớp học', BookOpen, '/classrooms'], ['Phân công dự án', Users], ['Báo cáo', BarChart3],
   ],
   STAFF: [
-    ['Báo cáo sự cố', CircleAlert, '/incidents'],
+
     ['Tổng quan', LayoutDashboard, '/dashboard'], ['Môn học', BookOpen, '/staff/subjects'], ['Đề cương', FileUp, '/workflow'],
     ['Lớp học & thành viên', Building2, '/staff/classrooms'], ['Tài nguyên', GraduationCap, '/resources'], ['Tài khoản', Users, '/staff/accounts/import'],
   ],
   LECTURER: [
-    ['Quản lý tiêu chí', ClipboardCheck, '/evaluations/criteria'], ['Đánh giá cuối dự án', ClipboardCheck, '/evaluations/final'], ['Phản hồi câu trả lời', MessageSquare, '/evaluations/feedback'], ['Báo cáo sự cố', CircleAlert, '/incidents'],
+    ['Quản lý tiêu chí', ClipboardCheck, '/evaluations/criteria'], ['Đánh giá cuối dự án', ClipboardCheck, '/evaluations/final'], ['Phản hồi câu trả lời', MessageSquare, '/evaluations/feedback'],
     ['Tổng quan', LayoutDashboard], ['Lớp học', BookOpen, '/classrooms'], ['Dự án', FolderKanban, '/workflow'], ['Tạo dự án', Sparkles, '/lecturer/projects/new'], ['Nhóm sinh viên', Users, '/teams'],
     ['Đánh giá chéo', ClipboardCheck, '/evaluations/summary'], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'], ['Lịch họp', Video],
   ],
   STUDENT: [
-    ['Kết quả cuối dự án', ClipboardCheck, '/evaluations/final'], ['Phản hồi câu trả lời', MessageSquare, '/evaluations/feedback'], ['Báo cáo sự cố', CircleAlert, '/incidents'],
+    ['Kết quả cuối dự án', ClipboardCheck, '/evaluations/final'], ['Phản hồi câu trả lời', MessageSquare, '/evaluations/feedback'],
     ['Tổng quan', LayoutDashboard], ['Lớp học của tôi', BookOpen, '/classrooms'], ['Workspace nhóm', FolderKanban, '/student/teams'],
     ['Đánh giá chéo', ClipboardCheck, '/peer-evaluations'], ['Nhiệm vụ', ClipboardCheck], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'],
   ],
@@ -109,12 +109,12 @@ export function DashboardShell({ role, displayName, children, activePath = '/das
         })}
           </div>
         </details>
-        <details className="workspace-support" key={activePath} open={SUPPORT_PATHS.has(activePath)}>
+        {supportNavigation.length > 0 && <details className="workspace-support" key={activePath} open={SUPPORT_PATHS.has(activePath)}>
           <summary title="Đánh giá & hỗ trợ"><ClipboardCheck size={18} /><span>Đánh giá & hỗ trợ</span><ChevronDown size={16} className="support-chevron" /></summary>
           <div className="workspace-support-items">
             {supportNavigation.map(([label, Icon, path]) => <button type="button" key={path} className={path === activePath ? 'active' : ''} aria-current={path === activePath ? 'page' : undefined} onClick={() => navigate(path)}><Icon size={18} /><span>{label}</span></button>)}
           </div>
-        </details>
+        </details>}
       </nav>
       <div className="workspace-side-foot"><button type="button"><Settings size={18} /><span>Cài đặt</span></button><button type="button" onClick={logout}><LogOut size={18} /><span>Đăng xuất</span></button></div>
     </aside>
