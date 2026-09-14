@@ -18,12 +18,6 @@ import org.springframework.web.util.UriUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-/**
- * Controller REST cho module Resource: tài liệu môn học (theo lớp học) và
- * file bài nộp (theo nhóm). Upload dùng multipart/form-data, download trả
- * file trực tiếp kèm header Content-Disposition để trình duyệt lưu đúng
- * tên file gốc.
- */
 @RestController
 @RequestMapping("/api/v1/resources")
 public class ResourceController {
@@ -59,7 +53,8 @@ public class ResourceController {
         return ResponseEntity.status(201).body(ok("Resource uploaded", ResourceResponse.from(resource)));
     }
 
-    // Danh sách tài liệu của một lớp học.
+    // Danh sách tài liệu của một lớp học. Sinh viên chỉ xem được lớp mình theo học
+    // (kiểm tra quyền trong Service, ném AccessDeniedException nếu không thuộc lớp).
     @GetMapping("/classroom/{classroomId}")
     @PreAuthorize("hasAnyRole('ADMIN','STAFF','HEAD_DEPT','LECTURER','STUDENT')")
     public ApiResponse<List<ResourceResponse>> byClassroom(@PathVariable Long classroomId, Authentication auth) {
@@ -69,14 +64,15 @@ public class ResourceController {
     // Danh sách file bài nộp của một nhóm.
     @GetMapping("/team/{teamId}")
     @PreAuthorize("hasAnyRole('LECTURER','STUDENT')")
-    public ApiResponse<List<ResourceResponse>> byTeam(@PathVariable Long teamId, Authentication auth) {
-        return ok("Resources loaded", resourceService.listByTeam(teamId, auth.getName()).stream().map(ResourceResponse::from).toList());
+    public ApiResponse<List<ResourceResponse>> byTeam(@PathVariable Long teamId) {
+        return ok("Resources loaded", resourceService.listByTeam(teamId).stream().map(ResourceResponse::from).toList());
     }
 
-    // Tải file về máy; Service xác minh người dùng thuộc lớp/nhóm sở hữu file.
+    // Tải file về máy. Chỉ cần đăng nhập hợp lệ (đã áp dụng ở SecurityConfig),
+    // không giới hạn thêm theo role vì cả 5 vai trò đều có thể cần tải file.
     @GetMapping("/{id}/download")
-    public ResponseEntity<Resource> download(@PathVariable Long id, Authentication auth) {
-        ResourceService.FileDownload download = resourceService.loadForDownload(id, auth.getName());
+    public ResponseEntity<Resource> download(@PathVariable Long id) {
+        ResourceService.FileDownload download = resourceService.loadForDownload(id);
         Resource fileResource = new FileSystemResource(download.path());
         String encodedName = UriUtils.encode(download.resource().getOriginalFileName(), StandardCharsets.UTF_8);
         return ResponseEntity.ok()

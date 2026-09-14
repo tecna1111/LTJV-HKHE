@@ -1,0 +1,42 @@
+.classrooms-page { color: #334155; }
+.classrooms-back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-bottom: 16px; color: #64748b; font-size: 14px; font-weight: 600; text-decoration: none; }
+.classrooms-back:hover { color: var(--ws-accent); }
+.classrooms-page .workspace-heading h1 { margin-top: 8px; font-size: 34px; line-height: 1.2; }
+.classrooms-page .workspace-heading p { font-size: 16px; line-height: 1.6; }
+.classrooms-page .workspace-heading > div > span { font-size: 12px; }
+.classrooms-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 28px 0 18px; }
+.classrooms-section-heading h2 { margin: 0; font-size: 18px; }
+.classrooms-section-heading > span { padding: 6px 12px; border-radius: 20px; background: var(--ws-soft); color: var(--ws-accent); font-size: 13px; font-weight: 600; }
+.classrooms-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 20px; }
+.classrooms-card, .classrooms-empty { border: 1px solid var(--ws-line); border-radius: 17px; background: #fff; box-shadow: 0 5px 16px rgba(15, 23, 42, .03); }
+.classrooms-card { min-width: 0; padding: 26px; overflow-wrap: anywhere; }
+.classrooms-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
+.classrooms-icon { display: grid; place-items: center; width: 50px; height: 50px; flex: none; border-radius: 14px; background: var(--ws-soft); color: var(--ws-accent); }
+.classrooms-status { border-radius: 20px; padding: 6px 10px; background: #ecfdf5; color: #047857; font-size: 12px; font-weight: 600; }
+.classrooms-status.is-locked { background: #f1f5f9; color: #64748b; }
+.classrooms-code { color: var(--ws-accent); font-size: 12px; font-weight: 700; letter-spacing: .04em; }
+.classrooms-card h2 { margin: 8px 0; color: #1e293b; font-size: 20px; line-height: 1.4; }
+.classrooms-subject { margin: 0 0 18px; color: #64748b; font-size: 14px; line-height: 1.6; }
+.classrooms-term, .classrooms-counts, .classrooms-counts > span { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #64748b; }
+.classrooms-term { line-height: 1.6; }
+.classrooms-term svg, .classrooms-counts svg { flex: none; }
+.classrooms-counts { flex-wrap: wrap; gap: 12px 22px; margin: 18px 0; }
+.classrooms-details { border-top: 1px solid var(--ws-line); }
+.classrooms-details summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding-top: 8px; color: var(--ws-accent); font-size: 14px; font-weight: 600; cursor: pointer; list-style: none; }
+.classrooms-details summary::-webkit-details-marker { display: none; }
+.classrooms-details[open] summary > svg { transform: rotate(180deg); }
+.classrooms-roster h3 { display: flex; align-items: center; gap: 8px; margin: 20px 0 12px; font-size: 14px; }
+.classrooms-roster h3 > span { color: #64748b; font-size: 12px; font-weight: 500; }
+.classrooms-members { display: grid; gap: 12px; max-height: 320px; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+.classrooms-members li { display: flex; align-items: center; gap: 10px; }
+.classrooms-avatar { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: 50%; background: var(--ws-soft); color: var(--ws-accent); font-size: 13px; font-weight: 700; }
+.classrooms-members strong, .classrooms-members small { display: block; font-size: 13px; line-height: 1.5; }
+.classrooms-members small { color: #64748b; font-size: 12px; }
+.classrooms-muted { color: #64748b; font-size: 13px; }
+.classrooms-empty { display: flex; align-items: center; justify-content: center; flex-direction: column; min-height: 280px; padding: 32px; text-align: center; }
+.classrooms-empty h3 { margin: 18px 0 8px; font-size: 18px; }
+.classrooms-empty p { max-width: 480px; margin: 0; color: #64748b; font-size: 14px; line-height: 1.6; }
+.classrooms-retry { margin-top: 18px; padding: 12px 18px; border: 0; border-radius: 10px; background: var(--ws-accent); color: #fff; font: inherit; font-size: 14px; cursor: pointer; }
+.classrooms-page :is(a, button, summary):focus-visible { outline: 2px solid var(--ws-accent); outline-offset: 4px; }
+@media (max-width: 850px) { .classrooms-grid { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .classrooms-page .workspace-heading h1 { font-size: 28px; } .classrooms-page .workspace-heading p { font-size: 14px; } .classrooms-card { padding: 20px; } }

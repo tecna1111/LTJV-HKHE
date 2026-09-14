@@ -29,19 +29,19 @@ const ROLE_NAV = {
   ],
   HEAD_DEPT: [
     ['Tổng quan', LayoutDashboard], ['Dự án chờ duyệt', ClipboardCheck, '/workflow?status=PENDING'], ['Dự án đã duyệt', FolderKanban, '/workflow?status=APPROVED'],
-    ['Lớp học', BookOpen], ['Phân công dự án', Users], ['Báo cáo', BarChart3],
+    ['Lớp học', BookOpen, '/classrooms'], ['Phân công dự án', Users], ['Báo cáo', BarChart3],
   ],
   STAFF: [
     ['Tổng quan', LayoutDashboard, '/dashboard'], ['Môn học', BookOpen, '/staff/subjects'], ['Đề cương', FileUp, '/workflow'],
     ['Lớp học & thành viên', Building2, '/staff/classrooms'], ['Tài nguyên', GraduationCap, '/resources'], ['Tài khoản', Users, '/staff/accounts/import'],
   ],
   LECTURER: [
-    ['Tổng quan', LayoutDashboard], ['Lớp học', BookOpen], ['Dự án', FolderKanban, '/workflow'], ['Tạo dự án', Sparkles, '/lecturer/projects/new'], ['Nhóm sinh viên', Users, '/teams'],
-    ['Đánh giá', ClipboardCheck], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'], ['Lịch họp', Video],
+    ['Tổng quan', LayoutDashboard], ['Lớp học', BookOpen, '/classrooms'], ['Dự án', FolderKanban, '/workflow'], ['Tạo dự án', Sparkles, '/lecturer/projects/new'], ['Nhóm sinh viên', Users, '/teams'],
+    ['Đánh giá chéo', ClipboardCheck, '/evaluations/summary'], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'], ['Lịch họp', Video],
   ],
   STUDENT: [
-    ['Tổng quan', LayoutDashboard], ['Lớp học của tôi', BookOpen], ['Workspace nhóm', FolderKanban, '/student/teams'],
-    ['Nhiệm vụ', ClipboardCheck], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'],
+    ['Tổng quan', LayoutDashboard], ['Lớp học của tôi', BookOpen, '/classrooms'], ['Workspace nhóm', FolderKanban, '/student/teams'],
+    ['Đánh giá chéo', ClipboardCheck, '/peer-evaluations'], ['Nhiệm vụ', ClipboardCheck], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'],
   ],
 };
 
@@ -49,7 +49,7 @@ const ROLE_MODULES = {
   HEAD_DEPT: [
     ['Dự án chờ duyệt', 'Các đề xuất của giảng viên sẽ xuất hiện tại đây.', ClipboardCheck],
     ['Phân công dự án', 'Phân công dự án đã duyệt cho các lớp thuộc bộ môn.', FolderKanban],
-    ['Lớp học', 'Theo dõi danh sách lớp và thông tin giảng dạy.', BookOpen],
+    ['Lớp học', 'Theo dõi danh sách lớp và thông tin giảng dạy.', BookOpen, '/classrooms'],
   ],
   STAFF: [
     ['Môn học & đề cương', 'Xem, tạo và quản lý dữ liệu môn học, đề cương đào tạo.', BookOpen, '/staff/subjects'],
@@ -57,12 +57,12 @@ const ROLE_MODULES = {
     ['Tài khoản đào tạo', 'Import và quản lý tài khoản giảng viên, sinh viên.', FileUp, '/staff/accounts/import'],
   ],
   LECTURER: [
-    ['Lớp học phụ trách', 'Các lớp được phân công sẽ xuất hiện tại đây.', BookOpen],
+    ['Lớp học phụ trách', 'Các lớp được phân công sẽ xuất hiện tại đây.', BookOpen, '/classrooms'],
     ['Dự án & nhóm', 'Quản lý dự án, nhóm sinh viên và cột mốc.', FolderKanban],
     ['Đánh giá', 'Bài nộp và yêu cầu đánh giá sẽ xuất hiện tại đây.', ClipboardCheck],
   ],
   STUDENT: [
-    ['Lớp học của tôi', 'Các lớp được phân công sẽ xuất hiện tại đây.', BookOpen],
+    ['Lớp học của tôi', 'Các lớp được phân công sẽ xuất hiện tại đây.', BookOpen, '/classrooms'],
     ['Workspace nhóm', 'Không gian dự án sẽ sẵn sàng khi bạn được xếp nhóm.', FolderKanban, '/student/teams'],
     ['Nhiệm vụ', 'Nhiệm vụ được giao sẽ xuất hiện tại đây.', ClipboardCheck],
   ],

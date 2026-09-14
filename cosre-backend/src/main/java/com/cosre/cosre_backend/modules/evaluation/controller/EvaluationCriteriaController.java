@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/evaluations/criteria")
+@RequestMapping("/api/v1/evaluations/criteria")
 @RequiredArgsConstructor
 public class EvaluationCriteriaController {
 

@@ -16,3 +16,32 @@ export const getEligibleMembers = async (role) => (await api.get('/classrooms/el
 export const addClassMember = async (id, type, userId) => (await api.post(`/classrooms/${id}/${type}/${userId}`)).data;
 // Gọi API để xóa thành viên khỏi lớp học.
 export const removeClassMember = async (id, type, userId) => (await api.delete(`/classrooms/${id}/${type}/${userId}`)).data;
+
+// Gọi API để import danh sách lớp học từ tệp CSV/XLSX.
+export const importClassrooms = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post('/classrooms/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+// Gọi API để import danh sách thành viên (sinh viên/giảng viên) vào một lớp học từ tệp CSV/XLSX.
+// type là 'students' hoặc 'lecturers', đồng bộ với addClassMember/removeClassMember.
+export const importClassMembers = async (id, type, file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post(`/classrooms/${id}/${type}/import`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+// Gọi API để tải tệp Excel mẫu (.xlsx) dùng khi import danh sách lớp học.
+export const downloadClassroomTemplate = async () =>
+  (await api.get('/classrooms/import/template', { responseType: 'blob' })).data;
+
+// Gọi API để tải tệp Excel mẫu (.xlsx) dùng khi import danh sách thành viên vào lớp.
+export const downloadMemberTemplate = async () =>
+  (await api.get('/classrooms/members-import/template', { responseType: 'blob' })).data;

@@ -5,12 +5,14 @@ import com.cosre.cosre_backend.common.exception.BusinessRuleException;
 import com.cosre.cosre_backend.common.exception.ResourceNotFoundException;
 import com.cosre.cosre_backend.modules.account.entity.User;
 import com.cosre.cosre_backend.modules.account.repository.UserRepository;
+import com.cosre.cosre_backend.modules.classroom.entity.Classroom;
 import com.cosre.cosre_backend.modules.classroom.repository.ClassroomRepository;
 import com.cosre.cosre_backend.modules.resource.entity.ResourceCategory;
 import com.cosre.cosre_backend.modules.resource.entity.ResourceFile;
 import com.cosre.cosre_backend.modules.resource.repository.ResourceRepository;
 import com.cosre.cosre_backend.modules.team.repository.TeamRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,13 +25,13 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.security.access.AccessDeniedException;
 
 /**
  * Logic nghiệp vụ cho việc upload/download/xóa tài liệu môn học và file bài
  * nộp. File vật lý được lưu trên ổ đĩa server tại thư mục cấu hình bởi
  * {@code app.upload.dir} (mặc định "uploads" ngay tại thư mục chạy app);
  * database chỉ lưu metadata (repository pattern giống các module khác).
+ * Kích thước file tối đa được giới hạn bởi {@code app.upload.max-file-size-bytes}.
  */
 @Service
 @Transactional
@@ -39,18 +41,18 @@ public class ResourceService {
     private final TeamRepository teamRepository;
     private final UserRepository userRepository;
     private final Path storageRoot;
-    private final long maxFileSize;
+    private final long maxFileSizeBytes;
 
     public ResourceService(ResourceRepository resourceRepository, ClassroomRepository classroomRepository,
             TeamRepository teamRepository, UserRepository userRepository,
             @Value("${app.upload.dir:uploads}") String uploadDir,
-            @Value("${app.upload.max-file-size-bytes:26214400}") long maxFileSize) {
+            @Value("${app.upload.max-file-size-bytes}") long maxFileSizeBytes) {
         this.resourceRepository = resourceRepository;
         this.classroomRepository = classroomRepository;
         this.teamRepository = teamRepository;
         this.userRepository = userRepository;
+        this.maxFileSizeBytes = maxFileSizeBytes;
         this.storageRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
-        this.maxFileSize = maxFileSize;
         try {
             Files.createDirectories(storageRoot);
         } catch (IOException e) {
@@ -62,7 +64,6 @@ public class ResourceService {
     public ResourceFile uploadClassMaterial(Long classroomId, String title, String description,
             MultipartFile file, String username) {
         if (!classroomRepository.existsById(classroomId)) throw new ResourceNotFoundException("Classroom not found");
-        requireClassroomAccess(classroomId, username, true);
         return store(file, title, description, ResourceCategory.CLASS_MATERIAL, classroomId, null, username);
     }
 
@@ -70,27 +71,34 @@ public class ResourceService {
     public ResourceFile uploadTeamSubmission(Long teamId, String title, String description,
             MultipartFile file, String username) {
         if (!teamRepository.existsById(teamId)) throw new ResourceNotFoundException("Team not found");
-        requireTeamAccess(teamId, username);
         return store(file, title, description, ResourceCategory.TEAM_SUBMISSION, null, teamId, username);
     }
 
+    // Sinh viên chỉ xem được tài liệu của lớp mình đang theo học; các vai trò
+    // khác (Admin/Staff/Lecturer...) không bị giới hạn theo lớp.
     @Transactional(readOnly = true)
     public List<ResourceFile> listByClassroom(Long classroomId, String username) {
-        requireClassroomAccess(classroomId, username, false);
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (user.getRole() == RoleEnum.STUDENT) {
+            Classroom classroom = classroomRepository.findDetailedById(classroomId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Classroom not found"));
+            boolean enrolled = classroom.getStudents().stream()
+                    .anyMatch(s -> s.getUsername().equals(username));
+            if (!enrolled) throw new AccessDeniedException("You are not assigned to this classroom");
+        }
         return resourceRepository.findByClassroomIdOrderByCreatedAtDesc(classroomId);
     }
 
     @Transactional(readOnly = true)
-    public List<ResourceFile> listByTeam(Long teamId, String username) {
-        requireTeamAccess(teamId, username);
+    public List<ResourceFile> listByTeam(Long teamId) {
         return resourceRepository.findByTeamIdOrderByCreatedAtDesc(teamId);
     }
 
     // Chuẩn bị đường dẫn file vật lý trên đĩa kèm metadata để Controller stream về client.
     @Transactional(readOnly = true)
-    public FileDownload loadForDownload(Long id, String username) {
+    public FileDownload loadForDownload(Long id) {
         ResourceFile resource = requireResource(id);
-        requireResourceAccess(resource, username);
         Path path = storageRoot.resolve(resource.getStoredFileName()).normalize();
         if (!Files.exists(path)) throw new ResourceNotFoundException("File not found on server");
         return new FileDownload(resource, path);
@@ -103,10 +111,9 @@ public class ResourceService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         boolean isOwner = resource.getUploadedBy().getUsername().equals(username);
-        boolean isAdministrator = user.getRole() == RoleEnum.ADMIN || user.getRole() == RoleEnum.STAFF;
-        boolean lecturerWithAccess = user.getRole() == RoleEnum.LECTURER && hasResourceAccess(resource, user);
-        if (!isOwner && !isAdministrator && !lecturerWithAccess)
-            throw new AccessDeniedException("You cannot delete this resource");
+        boolean isStaffLike = user.getRole() == RoleEnum.ADMIN || user.getRole() == RoleEnum.STAFF
+                || user.getRole() == RoleEnum.LECTURER;
+        if (!isOwner && !isStaffLike) throw new BusinessRuleException("You cannot delete this resource");
         try {
             Files.deleteIfExists(storageRoot.resolve(resource.getStoredFileName()));
         } catch (IOException e) {
@@ -119,8 +126,10 @@ public class ResourceService {
     private ResourceFile store(MultipartFile file, String title, String description, ResourceCategory category,
             Long classroomId, Long teamId, String username) {
         if (file == null || file.isEmpty()) throw new BusinessRuleException("File is required");
-        if (file.getSize() > maxFileSize)
-            throw new BusinessRuleException("File exceeds the maximum allowed size of 25 MB");
+        if (file.getSize() > maxFileSizeBytes) {
+            throw new BusinessRuleException(
+                    "File exceeds the maximum allowed size of " + maxFileSizeBytes + " bytes");
+        }
         User uploader = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -146,60 +155,11 @@ public class ResourceService {
         resource.setContentType(file.getContentType());
         resource.setFileSize(file.getSize());
         resource.setUploadedBy(uploader);
-        try {
-            return resourceRepository.save(resource);
-        } catch (RuntimeException exception) {
-            try { Files.deleteIfExists(target); } catch (IOException ignored) { }
-            throw exception;
-        }
+        return resourceRepository.save(resource);
     }
 
     private ResourceFile requireResource(Long id) {
         return resourceRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Resource not found"));
-    }
-
-    private void requireResourceAccess(ResourceFile resource, String username) {
-        User user = requireUser(username);
-        if (!hasResourceAccess(resource, user)) throw new AccessDeniedException("You cannot access this resource");
-    }
-
-    private boolean hasResourceAccess(ResourceFile resource, User user) {
-        if (user.getRole() == RoleEnum.ADMIN || user.getRole() == RoleEnum.STAFF || user.getRole() == RoleEnum.HEAD_DEPT)
-            return true;
-        if (resource.getCategory() == ResourceCategory.CLASS_MATERIAL) {
-            return classroomRepository.findDetailedById(resource.getClassroomId())
-                    .map(value -> value.getLecturers().stream().anyMatch(item -> item.getId().equals(user.getId()))
-                            || value.getStudents().stream().anyMatch(item -> item.getId().equals(user.getId())))
-                    .orElse(false);
-        }
-        return teamRepository.findById(resource.getTeamId())
-                .map(value -> value.getLecturer().getId().equals(user.getId())
-                        || value.getMembers().stream().anyMatch(item -> item.getId().equals(user.getId())))
-                .orElse(false);
-    }
-
-    private void requireClassroomAccess(Long classroomId, String username, boolean upload) {
-        User user = requireUser(username);
-        if (user.getRole() == RoleEnum.ADMIN || user.getRole() == RoleEnum.STAFF || user.getRole() == RoleEnum.HEAD_DEPT)
-            return;
-        var classroom = classroomRepository.findDetailedById(classroomId)
-                .orElseThrow(() -> new ResourceNotFoundException("Classroom not found"));
-        boolean lecturer = classroom.getLecturers().stream().anyMatch(item -> item.getId().equals(user.getId()));
-        boolean student = classroom.getStudents().stream().anyMatch(item -> item.getId().equals(user.getId()));
-        if (!lecturer && (!student || upload)) throw new AccessDeniedException("You cannot access this classroom resource");
-    }
-
-    private void requireTeamAccess(Long teamId, String username) {
-        User user = requireUser(username);
-        var team = teamRepository.findById(teamId).orElseThrow(() -> new ResourceNotFoundException("Team not found"));
-        boolean lecturer = team.getLecturer().getId().equals(user.getId());
-        boolean member = team.getMembers().stream().anyMatch(item -> item.getId().equals(user.getId()));
-        if (!lecturer && !member) throw new AccessDeniedException("You cannot access this team submission");
-    }
-
-    private User requireUser(String username) {
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
     // Loại bỏ đường dẫn thư mục khỏi tên file gốc để tránh path traversal (../../etc).

@@ -33,7 +33,10 @@ function ClassroomListPage() {
   const toggle = async (item) => { try { await setClassroomStatus(item.id, !item.active); await load(); } catch (e) { setFeedback({ text: getApiError(e), error: true }); } };
   return <AcademicLayout activeTab="classrooms" title="Quản lý lớp học">
     {feedback.text && <div className={`academic-feedback ${feedback.error ? 'error' : ''}`}>{feedback.text}</div>}
-    <div className="academic-toolbar"><div style={{ flex: 1 }}/><button className="academic-button" onClick={() => { setForm(emptyForm); setEditingId(null); setShowForm(true); }}>Thêm lớp học</button></div>
+    <div className="academic-toolbar"><div style={{ flex: 1 }}/>
+      <button className="academic-button secondary" onClick={() => navigate('/staff/classrooms/import')}>Import từ Excel</button>
+      <button className="academic-button" onClick={() => { setForm(emptyForm); setEditingId(null); setShowForm(true); }}>Thêm lớp học</button>
+    </div>
     {showForm && <form className="academic-panel academic-form" onSubmit={save}>
       <label>Mã lớp<input required maxLength="50" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })}/></label><label>Tên lớp<input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}/></label>
       <label>Môn học<select required value={form.subjectId} onChange={(e) => setForm({ ...form, subjectId: e.target.value })}><option value="">Chọn môn học</option>{subjects.map((s) => <option value={s.id} key={s.id}>{s.code} — {s.name}</option>)}</select></label>

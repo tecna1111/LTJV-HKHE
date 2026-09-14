@@ -6,6 +6,33 @@
   color: #1f2430;
 }
 
+.create-project-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1px solid #d7dbe2;
+  border-radius: 8px;
+  background: #fff;
+  color: #333a45;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.create-project-back-link:hover {
+  background: #f2f4fb;
+  color: #3d5af1;
+}
+
+.create-project-back-link:focus-visible {
+  outline: 2px solid #3d5af1;
+  outline-offset: 3px;
+}
+
 .page-title {
   font-size: 26px;
   font-weight: 700;

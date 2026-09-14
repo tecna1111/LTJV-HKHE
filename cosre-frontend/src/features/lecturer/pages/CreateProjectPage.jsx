@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import ObjectiveListEditor from "../components/ObjectiveListEditor";
 import MilestoneEditor from "../components/MilestoneEditor";
 import {
@@ -164,6 +166,10 @@ export default function CreateProjectPage() {
 
   return (
     <div className="create-project-page">
+      <Link to="/workflow" className="create-project-back-link">
+        <ArrowLeft size={18} aria-hidden="true" />
+        Quay lại danh sách dự án
+      </Link>
       <h1 className="page-title">Tạo dự án mới</h1>
       <p className="page-subtitle">
         Dựa trên đề cương môn học, tạo thông tin dự án và các cột mốc, sau đó
