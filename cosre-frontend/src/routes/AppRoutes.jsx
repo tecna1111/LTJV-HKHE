@@ -23,6 +23,7 @@ import WhiteboardPage from '../modules/collaboration/pages/WhiteboardPage';
 import StudentTeamsPage from '../modules/team/pages/StudentTeamsPage';
 import ChatPage from '../modules/chat/pages/ChatPage';
 import ResourceLibraryPage from '../modules/resource/pages/ResourceLibraryPage';
+import MeetingPage from '../modules/meeting/pages/MeetingPage';
 
 function AppRoutes() {
   return (
@@ -41,6 +42,7 @@ function AppRoutes() {
         <Route path="/teams/:id/whiteboard" element={<ProtectedRoute><WhiteboardPage /></ProtectedRoute>} />
         <Route path="/student/teams" element={<ProtectedRoute requiredRole="STUDENT"><StudentTeamsPage /></ProtectedRoute>} />
         <Route path="/messages" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+        <Route path="/meetings" element={<ProtectedRoute><MeetingPage /></ProtectedRoute>} />
         <Route path="/resources" element={<ProtectedRoute><ResourceLibraryPage /></ProtectedRoute>} />
         <Route
           path="/lecturer/projects/new"
