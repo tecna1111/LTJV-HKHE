@@ -62,7 +62,7 @@ public class PeerEvaluationController {
     public ApiResponse<List<StudentEvaluationSummaryResponse>> getTeamSummary(
             @PathVariable Long teamId,
             @RequestParam Long projectId,
-            @RequestParam List<Long> memberIds) {
+            @RequestParam(required = false) List<Long> memberIds) {
         return ApiResponse.success(peerEvaluationService.getTeamSummary(teamId, projectId, memberIds));
     }
 
@@ -72,6 +72,13 @@ public class PeerEvaluationController {
     public ApiResponse<Void> lock(@RequestParam Long teamId, @RequestParam Long projectId) {
         peerEvaluationService.lockEvaluations(teamId, projectId);
         return ApiResponse.success(null, "Đã khóa đánh giá của nhóm");
+    }
+
+    @PostMapping("/open-final")
+    @PreAuthorize("hasRole('LECTURER')")
+    public ApiResponse<Void> openFinal(@RequestParam Long teamId, @RequestParam Long projectId) {
+        peerEvaluationService.openFinal(teamId, projectId);
+        return ApiResponse.success(null, "Final evaluation opened");
     }
 
     private Long currentUserId(Authentication authentication) {

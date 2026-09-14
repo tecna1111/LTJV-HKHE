@@ -7,6 +7,7 @@ import com.cosre.cosre_backend.modules.evaluation.dto.response.StudentEvaluation
 import java.util.List;
 
 public interface PeerEvaluationService {
+    void openFinal(Long teamId, Long projectId);
 
     /**
      * Nộp (hoặc nộp lại nếu chưa LOCKED) một bài đánh giá chéo.

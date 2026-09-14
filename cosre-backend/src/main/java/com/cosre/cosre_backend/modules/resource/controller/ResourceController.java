@@ -64,15 +64,14 @@ public class ResourceController {
     // Danh sách file bài nộp của một nhóm.
     @GetMapping("/team/{teamId}")
     @PreAuthorize("hasAnyRole('LECTURER','STUDENT')")
-    public ApiResponse<List<ResourceResponse>> byTeam(@PathVariable Long teamId) {
-        return ok("Resources loaded", resourceService.listByTeam(teamId).stream().map(ResourceResponse::from).toList());
+    public ApiResponse<List<ResourceResponse>> byTeam(@PathVariable Long teamId, Authentication auth) {
+        return ok("Resources loaded", resourceService.listByTeam(teamId, auth.getName()).stream().map(ResourceResponse::from).toList());
     }
 
-    // Tải file về máy. Chỉ cần đăng nhập hợp lệ (đã áp dụng ở SecurityConfig),
-    // không giới hạn thêm theo role vì cả 5 vai trò đều có thể cần tải file.
+    // Service checks classroom/team membership before returning a file.
     @GetMapping("/{id}/download")
-    public ResponseEntity<Resource> download(@PathVariable Long id) {
-        ResourceService.FileDownload download = resourceService.loadForDownload(id);
+    public ResponseEntity<Resource> download(@PathVariable Long id, Authentication auth) {
+        ResourceService.FileDownload download = resourceService.loadForDownload(id, auth.getName());
         Resource fileResource = new FileSystemResource(download.path());
         String encodedName = UriUtils.encode(download.resource().getOriginalFileName(), StandardCharsets.UTF_8);
         return ResponseEntity.ok()
@@ -87,6 +86,18 @@ public class ResourceController {
     public ApiResponse<Void> delete(@PathVariable Long id, Authentication auth) {
         resourceService.delete(id, auth.getName());
         return ok("Resource deleted", null);
+    }
+
+    public record MetadataRequest(@jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max=255) String title,
+            @jakarta.validation.constraints.Size(max=1000) String description, Long milestoneId, Long checkpointId) {}
+
+    @GetMapping("/{id}")
+    public ApiResponse<ResourceResponse> metadata(@PathVariable Long id, Authentication auth) {
+        return ok("Resource loaded", ResourceResponse.from(resourceService.metadata(id, auth.getName())));
+    }
+    @PutMapping("/{id}/metadata")
+    public ApiResponse<ResourceResponse> metadata(@PathVariable Long id, @jakarta.validation.Valid @RequestBody MetadataRequest request, Authentication auth) {
+        return ok("Resource updated", ResourceResponse.from(resourceService.updateMetadata(id, request.title(), request.description(), request.milestoneId(), request.checkpointId(), auth.getName())));
     }
 
     private MediaType resolveContentType(String contentType) {

@@ -23,12 +23,35 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Transactional(readOnly = true)
 @Service
 @RequiredArgsConstructor
 public class PeerEvaluationServiceImpl implements PeerEvaluationService {
 
     private final PeerEvaluationRepository peerEvaluationRepository;
     private final EvaluationCriteriaRepository criteriaRepository;
+    private final com.cosre.cosre_backend.modules.evaluation.service.EvaluationAccessService access;
+    private final com.cosre.cosre_backend.modules.evaluation.repository.EvaluationRoundRepository rounds;
+    private final com.cosre.cosre_backend.modules.project.repository.ProjectRepository projects;
+
+    private com.cosre.cosre_backend.modules.evaluation.entity.EvaluationRound round(Long teamId, Long projectId) {
+        String id = teamId + ":" + projectId;
+        return rounds.findById(id).orElseGet(() -> {
+            var round = new com.cosre.cosre_backend.modules.evaluation.entity.EvaluationRound();
+            round.setId(id);
+            return round;
+        });
+    }
+
+    @Transactional
+    public void openFinal(Long teamId, Long projectId) {
+        access.lockProject(projectId);
+        access.lecturer(teamId, projectId);
+        var round = round(teamId, projectId);
+        if (round.isLocked()) throw new IllegalArgumentException("Evaluation round is locked");
+        round.setFinalOpen(true);
+        rounds.save(round);
+    }
 
     @Override
     @Transactional
@@ -36,6 +59,27 @@ public class PeerEvaluationServiceImpl implements PeerEvaluationService {
         if (evaluatorId.equals(request.getEvaluateeId())) {
             throw new IllegalArgumentException("Không thể tự đánh giá bản thân");
         }
+
+        access.lockProject(request.getProjectId());
+        var team = access.team(request.getTeamId(), request.getProjectId());
+        access.member(team, evaluatorId);
+        access.member(team, request.getEvaluateeId());
+        var round = round(request.getTeamId(), request.getProjectId());
+        if (round.isLocked()) throw new IllegalArgumentException("Evaluation round is locked");
+        if (request.getMilestoneId() == null && !round.isFinalOpen())
+            throw new IllegalArgumentException("Final evaluation has not been opened by the lecturer");
+        if (request.getMilestoneId() != null && projects.findById(request.getProjectId()).orElseThrow()
+                .getMilestones().stream().noneMatch(m -> m.getId().equals(request.getMilestoneId())))
+            throw new IllegalArgumentException("Milestone does not belong to project");
+        if (request.getDetails() == null || request.getDetails().isEmpty())
+            throw new IllegalArgumentException("Criteria scores are required");
+        var rubric = criteriaRepository.findByProjectId(request.getProjectId());
+        var submittedIds = request.getDetails().stream().map(PeerEvaluationSubmitRequest.DetailItem::getCriteriaId).toList();
+        if (new java.util.HashSet<>(submittedIds).size() != submittedIds.size()
+                || !new java.util.HashSet<>(submittedIds).equals(rubric.stream().map(EvaluationCriteria::getId).collect(Collectors.toSet())))
+            throw new IllegalArgumentException("Submit every project criterion exactly once");
+        if (rubric.stream().map(EvaluationCriteria::getWeight).reduce(BigDecimal.ZERO, BigDecimal::add).compareTo(BigDecimal.ONE) != 0)
+            throw new IllegalArgumentException("Rubric weights must sum to 1 before evaluation");
 
         // Nạp toàn bộ tiêu chí liên quan 1 lần để tránh N+1 query
         List<Long> criteriaIds = request.getDetails().stream()
@@ -59,13 +103,13 @@ public class PeerEvaluationServiceImpl implements PeerEvaluationService {
         // Upsert: nếu đã có bài đánh giá cho cặp evaluator-evaluatee-milestone này thì cập nhật lại,
         // trừ khi bài đó đã bị LOCKED.
         PeerEvaluation peerEvaluation = peerEvaluationRepository
-                .findByEvaluatorIdAndEvaluateeIdAndProjectIdAndMilestoneId(
-                        evaluatorId, request.getEvaluateeId(), request.getProjectId(), request.getMilestoneId())
+                .findByEvaluatorIdAndEvaluateeIdAndProjectIdAndTeamIdAndMilestoneId(
+                        evaluatorId, request.getEvaluateeId(), request.getProjectId(), request.getTeamId(), request.getMilestoneId())
                 .orElse(null);
 
         if (peerEvaluation != null) {
             if (peerEvaluation.getStatus() == EvaluationStatus.LOCKED) {
-                throw new IllegalStateException("Bài đánh giá này đã bị khóa, không thể chỉnh sửa");
+                throw new IllegalArgumentException("Bài đánh giá này đã bị khóa, không thể chỉnh sửa");
             }
             peerEvaluation.clearDetails();
         } else {
@@ -104,29 +148,32 @@ public class PeerEvaluationServiceImpl implements PeerEvaluationService {
 
     @Override
     public List<PeerEvaluationResponse> getGivenEvaluations(Long evaluatorId, Long projectId) {
+        access.viewProject(projectId);
         return peerEvaluationRepository.findByEvaluatorIdAndProjectId(evaluatorId, projectId)
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
     public List<PeerEvaluationResponse> getReceivedEvaluations(Long evaluateeId, Long projectId) {
+        access.viewProject(projectId);
         return peerEvaluationRepository.findByEvaluateeIdAndProjectId(evaluateeId, projectId)
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
     public StudentEvaluationSummaryResponse getStudentSummary(Long studentId, Long teamId, Long projectId) {
-        List<PeerEvaluation> received = peerEvaluationRepository
-                .findByEvaluateeIdAndTeamIdAndProjectIdAndStatus(studentId, teamId, projectId, EvaluationStatus.SUBMITTED);
+        access.member(access.lecturer(teamId, projectId), studentId);
+        List<PeerEvaluation> received = new java.util.ArrayList<>(peerEvaluationRepository
+                .findByEvaluateeIdAndTeamIdAndProjectIdAndStatus(studentId, teamId, projectId, EvaluationStatus.SUBMITTED));
         received.addAll(peerEvaluationRepository
                 .findByEvaluateeIdAndTeamIdAndProjectIdAndStatus(studentId, teamId, projectId, EvaluationStatus.LOCKED));
 
-        return buildSummary(studentId, teamId, projectId, received);
+        return buildSummary(studentId, teamId, projectId, received.stream().filter(p -> p.getMilestoneId() == null).toList());
     }
 
     @Override
     public List<StudentEvaluationSummaryResponse> getTeamSummary(Long teamId, Long projectId, List<Long> memberIds) {
-        return memberIds.stream()
+        return access.lecturer(teamId, projectId).getMembers().stream().map(com.cosre.cosre_backend.modules.account.entity.User::getId)
                 .map(memberId -> getStudentSummary(memberId, teamId, projectId))
                 .collect(Collectors.toList());
     }
@@ -134,6 +181,11 @@ public class PeerEvaluationServiceImpl implements PeerEvaluationService {
     @Override
     @Transactional
     public void lockEvaluations(Long teamId, Long projectId) {
+        access.lockProject(projectId);
+        access.lecturer(teamId, projectId);
+        var round = round(teamId, projectId);
+        round.setLocked(true);
+        rounds.save(round);
         List<PeerEvaluation> evaluations = peerEvaluationRepository.findByTeamIdAndProjectId(teamId, projectId);
         for (PeerEvaluation pe : evaluations) {
             if (pe.getStatus() == EvaluationStatus.SUBMITTED) {

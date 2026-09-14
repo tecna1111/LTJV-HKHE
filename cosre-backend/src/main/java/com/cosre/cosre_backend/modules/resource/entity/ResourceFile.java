@@ -38,6 +38,12 @@ public class ResourceFile {
     // Bắt buộc khi category = TEAM_SUBMISSION, null khi là tài liệu lớp học.
     @Column(name = "team_id")
     private Long teamId;
+    @Column(name = "milestone_id") private Long milestoneId;
+    @Column(name = "checkpoint_id") private Long checkpointId;
+    public Long getMilestoneId() { return milestoneId; }
+    public void setMilestoneId(Long id) { milestoneId = id; }
+    public Long getCheckpointId() { return checkpointId; }
+    public void setCheckpointId(Long id) { checkpointId = id; }
 
     @Column(name = "original_file_name", nullable = false)
     private String originalFileName;
