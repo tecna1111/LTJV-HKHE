@@ -4,6 +4,8 @@ import com.cosre.cosre_backend.modules.checkpoint.dto.*;
 import com.cosre.cosre_backend.modules.checkpoint.entity.*;
 import com.cosre.cosre_backend.modules.checkpoint.repository.*;
 import lombok.RequiredArgsConstructor;
+import com.cosre.cosre_backend.common.exception.BusinessRuleException;
+import com.cosre.cosre_backend.common.exception.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,19 +18,23 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CheckpointService {
 
+    private final CheckpointAccessService access;
     private final CheckpointRepository checkpointRepository;
     private final CheckpointAssignmentRepository assignmentRepository;
     private final CheckpointSubmissionRepository submissionRepository;
 
     @Transactional
-    public CheckpointResponse createCheckpoint(CreateCheckpointRequest request, Long currentUserId) {
+    public CheckpointResponse createCheckpoint(CreateCheckpointRequest request) {
+        var team = access.leader(request.teamId());
+        access.validateAssignees(team, request.assigneeIds());
+        access.validateMilestone(team, request.milestoneId());
         Checkpoint checkpoint = new Checkpoint();
         checkpoint.setTeamId(request.teamId());
         checkpoint.setMilestoneId(request.milestoneId());
         checkpoint.setTitle(request.title());
         checkpoint.setDescription(request.description());
         checkpoint.setDueAt(request.dueAt());
-        checkpoint.setCreatedBy(currentUserId);
+        checkpoint.setCreatedBy(access.currentUser().getId());
         checkpoint.setStatus(CheckpointStatus.OPEN);
 
         Checkpoint savedCheckpoint = checkpointRepository.save(checkpoint);
@@ -43,10 +49,13 @@ public class CheckpointService {
     @Transactional
     public CheckpointResponse updateCheckpoint(Long id, UpdateCheckpointRequest request) {
         Checkpoint checkpoint = checkpointRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Checkpoint không tồn tại"));
+                .orElseThrow(() -> new ResourceNotFoundException("Checkpoint không tồn tại"));
+
+        var team = access.leader(checkpoint.getTeamId());
+        access.validateAssignees(team, request.assigneeIds());
 
         if (checkpoint.getStatus() == CheckpointStatus.APPROVED) {
-            throw new IllegalStateException("Không thể chỉnh sửa Checkpoint đã được duyệt");
+            throw new BusinessRuleException("Không thể chỉnh sửa Checkpoint đã được duyệt");
         }
 
         checkpoint.setTitle(request.title());
@@ -62,19 +71,21 @@ public class CheckpointService {
     }
 
     @Transactional
-    public CheckpointResponse submitCheckpoint(Long checkpointId, SubmitCheckpointRequest request, Long currentUserId) {
+    public CheckpointResponse submitCheckpoint(Long checkpointId, SubmitCheckpointRequest request) {
         Checkpoint checkpoint = checkpointRepository.findById(checkpointId)
-                .orElseThrow(() -> new RuntimeException("Checkpoint không tồn tại"));
+                .orElseThrow(() -> new ResourceNotFoundException("Checkpoint không tồn tại"));
+
+        access.assignee(checkpoint);
 
         // Kiểm tra chuyển trạng thái hợp lệ
         if (checkpoint.getStatus() == CheckpointStatus.APPROVED) {
-            throw new IllegalStateException("Checkpoint đã được duyệt, không thể nộp lại");
+            throw new BusinessRuleException("Checkpoint đã được duyệt, không thể nộp lại");
         }
 
         // Tạo bản nộp bài
         CheckpointSubmission submission = new CheckpointSubmission();
         submission.setCheckpointId(checkpointId);
-        submission.setSubmittedBy(currentUserId);
+        submission.setSubmittedBy(access.currentUser().getId());
         submission.setContent(request.content());
         submission.setAttachmentUrl(request.attachmentUrl());
         submissionRepository.save(submission);
@@ -85,24 +96,26 @@ public class CheckpointService {
     }
 
     @Transactional
-    public CheckpointResponse reviewCheckpoint(Long checkpointId, ReviewCheckpointRequest request, Long reviewerId) {
+    public CheckpointResponse reviewCheckpoint(Long checkpointId, ReviewCheckpointRequest request) {
         Checkpoint checkpoint = checkpointRepository.findById(checkpointId)
-                .orElseThrow(() -> new RuntimeException("Checkpoint không tồn tại"));
+                .orElseThrow(() -> new ResourceNotFoundException("Checkpoint không tồn tại"));
+
+        access.lecturer(checkpoint.getTeamId());
 
         if (checkpoint.getStatus() != CheckpointStatus.SUBMITTED) {
-            throw new IllegalStateException("Chỉ có thể đánh giá bài nộp ở trạng thái SUBMITTED");
+            throw new BusinessRuleException("Chỉ có thể đánh giá bài nộp ở trạng thái SUBMITTED");
         }
 
         List<CheckpointSubmission> submissions = submissionRepository.findByCheckpointIdOrderBySubmittedAtDesc(checkpointId);
         if (submissions.isEmpty()) {
-            throw new RuntimeException("Không tìm thấy bài nộp cho Checkpoint này");
+            throw new ResourceNotFoundException("Không tìm thấy bài nộp cho Checkpoint này");
         }
 
         // Cập nhật kết quả review cho lần nộp mới nhất
         CheckpointSubmission latestSubmission = submissions.get(0);
         latestSubmission.setScore(request.score());
         latestSubmission.setFeedback(request.feedback());
-        latestSubmission.setReviewedBy(reviewerId);
+        latestSubmission.setReviewedBy(access.currentUser().getId());
         latestSubmission.setReviewedAt(LocalDateTime.now());
         submissionRepository.save(latestSubmission);
 
@@ -119,6 +132,7 @@ public class CheckpointService {
 
     @Transactional(readOnly = true)
     public List<CheckpointResponse> getCheckpointsByTeam(Long teamId) {
+        access.view(teamId);
         return checkpointRepository.findByTeamIdOrderByDueAtAsc(teamId)
                 .stream()
                 .map(this::mapToResponse)
@@ -128,7 +142,8 @@ public class CheckpointService {
     @Transactional(readOnly = true)
     public CheckpointResponse getCheckpointById(Long id) {
         Checkpoint checkpoint = checkpointRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Checkpoint không tồn tại"));
+                .orElseThrow(() -> new ResourceNotFoundException("Checkpoint không tồn tại"));
+        access.view(checkpoint.getTeamId());
         return mapToResponse(checkpoint);
     }
 
