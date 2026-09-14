@@ -32,7 +32,7 @@ function AppRoutes() {
         <Route path="/evaluations/criteria" element={<ProtectedRoute requiredRole="LECTURER"><CriteriaManagementPage /></ProtectedRoute>} />
         <Route path="/evaluations/final" element={<ProtectedRoute><FinalEvaluationPage /></ProtectedRoute>} />
         <Route path="/evaluations/feedback" element={<ProtectedRoute><AnswerFeedbackPage /></ProtectedRoute>} />
-        <Route path="/incidents" element={<ProtectedRoute><SystemReportsPage /></ProtectedRoute>} />
+        <Route path="/incidents" element={<ProtectedRoute requiredRole="ADMIN"><SystemReportsPage /></ProtectedRoute>} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
