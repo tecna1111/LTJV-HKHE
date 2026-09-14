@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, ClipboardList, FolderKanban, Lock, LogOut, RefreshCw, Star, Users, X } from 'lucide-react';
 import BrandLogo from '../../../components/BrandLogo';
 import { getApiError } from '../../../config/axios';
 import useAuthStore from '../../../store/useAuthStore';
 import { getTeams } from '../../team/teamService';
-import { getCriteria, getTeamSummary, lockTeamEvaluations } from '../evaluationService';
+import { getCriteria, getTeamSummary, lockTeamEvaluations, getRound } from '../evaluationService';
 import './EvaluationSummaryPage.css';
 
 function initials(name = '') {
@@ -22,6 +22,7 @@ function EvaluationSummaryPage() {
   const [summary, setSummary] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingSummary, setLoadingSummary] = useState(false);
+  const [round, setRound] = useState(null);
   const [locking, setLocking] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', text: '' });
 
@@ -39,16 +40,18 @@ function EvaluationSummaryPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const loadSummary = async (team) => {
+  const loadSummary = useCallback(async (team) => {
     if (!team) return;
     setLoadingSummary(true);
     setFeedback({ type: '', text: '' });
     try {
       const memberIds = team.members.map((m) => m.id);
-      const [criteriaResult, summaryResult] = await Promise.all([
+      const [criteriaResult, summaryResult, roundResult] = await Promise.all([
         getCriteria(team.projectId),
         memberIds.length > 0 ? getTeamSummary(team.id, team.projectId, memberIds) : Promise.resolve({ data: [] }),
+        getRound(team.id, team.projectId),
       ]);
+      setRound(roundResult);
       setCriteria(criteriaResult.data || []);
       setSummary(summaryResult.data || []);
     } catch (error) {
@@ -56,14 +59,15 @@ function EvaluationSummaryPage() {
     } finally {
       setLoadingSummary(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { if (selectedTeam) loadSummary(selectedTeam); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [selectedTeam?.id]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (selectedTeam) loadSummary(selectedTeam); }, [selectedTeam, loadSummary]);
 
   const criteriaTitle = (id) => criteria.find((c) => c.id === id)?.title || `Tiêu chí #${id}`;
   const memberName = (studentId) => selectedTeam?.members.find((m) => m.id === studentId)?.fullName || `SV #${studentId}`;
 
-  const isLocked = summary.some((s) => s.receivedEvaluations.some((e) => e.status === 'LOCKED'));
+  const isLocked = round?.locked || false;
 
   const handleLock = async () => {
     if (!selectedTeam) return;
@@ -86,7 +90,7 @@ function EvaluationSummaryPage() {
         <BrandLogo />
         <nav>
           <button onClick={() => navigate('/dashboard')}><FolderKanban size={19} /> Tổng quan</button>
-          <button className="active"><Star size={19} /> Đánh giá chéo</button>
+          <button className="active"><Star size={19} /> Đánh giá chéo</button><button onClick={() => navigate('/evaluations/final')}>Chấm cuối dự án</button><button onClick={() => navigate('/evaluations/criteria')}>Quản lý tiêu chí</button>
         </nav>
         <button className="es-logout" onClick={() => { clearAuth(); navigate('/login'); }}><LogOut size={18} /> Đăng xuất</button>
       </aside>
@@ -101,7 +105,7 @@ function EvaluationSummaryPage() {
           <div className="es-heading">
             <div><span>ĐÁNH GIÁ CHÉO</span><h1>Tổng hợp điểm nhóm</h1><p>Xem điểm trung bình sinh viên chấm cho nhau và chốt điểm khi kết thúc đợt đánh giá.</p></div>
             {selectedTeam && (
-              <button className="es-lock" disabled={locking || isLocked} onClick={handleLock}>
+              <button className="es-lock" disabled={locking || loadingSummary || isLocked} onClick={handleLock}>
                 <Lock size={16} /> {isLocked ? 'Đã khóa' : locking ? 'Đang khóa…' : 'Khóa đánh giá nhóm'}
               </button>
             )}

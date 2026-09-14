@@ -4,7 +4,7 @@ import {
   Activity, ArrowRight, BarChart3, BookOpen, Building2, CircleAlert,
   ClipboardCheck, FileUp, FolderKanban, GraduationCap, LayoutDashboard,
   LogOut, MessageSquare, Search, Settings, ShieldCheck, Sparkles, UserCheck,
-  UserMinus, Users, Video,
+  UserMinus, Users, Video, ChevronDown,
 } from 'lucide-react';
 import BrandLogo from '../../../components/BrandLogo';
 import useAuthStore from '../../../store/useAuthStore';
@@ -49,6 +49,8 @@ const ROLE_NAV = {
   ],
 };
 
+const SUPPORT_PATHS = new Set(['/evaluations/criteria', '/evaluations/final', '/evaluations/feedback', '/resources', '/incidents', '/admin/reports']);
+
 const ROLE_MODULES = {
   HEAD_DEPT: [
     ['Dự án chờ duyệt', 'Các đề xuất của giảng viên sẽ xuất hiện tại đây.', ClipboardCheck],
@@ -89,6 +91,8 @@ export function DashboardShell({ role, displayName, children, activePath = '/das
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const meta = ROLE_META[role] || ROLE_META.STUDENT;
   const RoleIcon = meta.icon;
+  const navigation = ROLE_NAV[role] || ROLE_NAV.STUDENT;
+  const supportNavigation = navigation.filter(([, , path]) => SUPPORT_PATHS.has(path));
   const logout = () => { clearAuth(); navigate('/login', { replace: true }); };
 
   return <main className={`workspace-shell workspace-shell--${meta.tone}`}>
@@ -96,10 +100,21 @@ export function DashboardShell({ role, displayName, children, activePath = '/das
       <div className="workspace-brand"><BrandLogo /></div>
       <div className="workspace-role"><span><RoleIcon size={18} /></span><div><strong>{meta.label}</strong><small>{meta.sub}</small></div></div>
       <nav className="workspace-nav" aria-label={`Menu ${meta.label}`}><small>KHÔNG GIAN LÀM VIỆC</small>
-        {(ROLE_NAV[role] || ROLE_NAV.STUDENT).map(([label, Icon, path], index) => {
-          const target = path || (index === 0 ? '/dashboard' : '');
-          return <button type="button" className={target === activePath ? 'active' : ''} key={label} onClick={() => target && navigate(target)}><Icon size={18} /><span>{label}</span></button>;
+        <details className="workspace-support workspace-overview">
+          <summary title="Tổng quan"><LayoutDashboard size={18} /><span>Tổng quan</span><ChevronDown size={16} className="support-chevron" /></summary>
+          <div className="workspace-support-items">
+        {navigation.filter(([, , path]) => !SUPPORT_PATHS.has(path)).map(([label, Icon, path]) => {
+          const target = path || (label === 'Tổng quan' ? '/dashboard' : '');
+          return <button type="button" className={target === activePath ? 'active' : ''} aria-current={target === activePath ? 'page' : undefined} key={label} onClick={() => target && navigate(target)}><Icon size={18} /><span>{label === 'Tổng quan' ? 'Trang tổng quan' : label}</span></button>;
         })}
+          </div>
+        </details>
+        <details className="workspace-support" key={activePath} open={SUPPORT_PATHS.has(activePath)}>
+          <summary title="Đánh giá & hỗ trợ"><ClipboardCheck size={18} /><span>Đánh giá & hỗ trợ</span><ChevronDown size={16} className="support-chevron" /></summary>
+          <div className="workspace-support-items">
+            {supportNavigation.map(([label, Icon, path]) => <button type="button" key={path} className={path === activePath ? 'active' : ''} aria-current={path === activePath ? 'page' : undefined} onClick={() => navigate(path)}><Icon size={18} /><span>{label}</span></button>)}
+          </div>
+        </details>
       </nav>
       <div className="workspace-side-foot"><button type="button"><Settings size={18} /><span>Cài đặt</span></button><button type="button" onClick={logout}><LogOut size={18} /><span>Đăng xuất</span></button></div>
     </aside>

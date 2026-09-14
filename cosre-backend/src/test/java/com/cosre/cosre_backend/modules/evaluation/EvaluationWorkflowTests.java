@@ -82,4 +82,13 @@ class EvaluationWorkflowTests {
         peer.lockEvaluations(team.getId(),project.getId());em.flush();em.clear();login(student1);
         assertThatThrownBy(() -> peer.submit(student1.getId(),request("8"))).hasMessageContaining("locked");
     }
+    @Test void memberCanReadRoundStateAfterLock() {
+        peer.lockEvaluations(team.getId(), project.getId()); em.flush(); em.clear(); login(student1);
+        assertThat(peer.getRound(team.getId(), project.getId()).isLocked()).isTrue();
+    }
+    @Test void outsiderCannotReadRoundState() {
+        team.getMembers().remove(student1); teams.saveAndFlush(team); login(student1);
+        assertThatThrownBy(() -> peer.getRound(team.getId(), project.getId()))
+            .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+    }
 }
