@@ -40,12 +40,12 @@ const ROLE_NAV = {
   LECTURER: [
     ['Quản lý tiêu chí', ClipboardCheck, '/evaluations/criteria'], ['Đánh giá cuối dự án', ClipboardCheck, '/evaluations/final'], ['Phản hồi câu trả lời', MessageSquare, '/evaluations/feedback'], ['Báo cáo sự cố', CircleAlert, '/incidents'],
     ['Tổng quan', LayoutDashboard], ['Lớp học', BookOpen, '/classrooms'], ['Dự án', FolderKanban, '/workflow'], ['Tạo dự án', Sparkles, '/lecturer/projects/new'], ['Nhóm sinh viên', Users, '/teams'],
-    ['Đánh giá chéo', ClipboardCheck, '/evaluations/summary'], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'], ['Lịch họp', Video],
+    ['Đánh giá chéo', ClipboardCheck, '/evaluations/summary'], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'], ['Lịch họp', Video, '/meetings'],
   ],
   STUDENT: [
     ['Kết quả cuối dự án', ClipboardCheck, '/evaluations/final'], ['Phản hồi câu trả lời', MessageSquare, '/evaluations/feedback'], ['Báo cáo sự cố', CircleAlert, '/incidents'],
     ['Tổng quan', LayoutDashboard], ['Lớp học của tôi', BookOpen, '/classrooms'], ['Workspace nhóm', FolderKanban, '/student/teams'],
-    ['Đánh giá chéo', ClipboardCheck, '/peer-evaluations'], ['Nhiệm vụ', ClipboardCheck], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'],
+    ['Đánh giá chéo', ClipboardCheck, '/peer-evaluations'], ['Nhiệm vụ', ClipboardCheck], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'], ['Lịch họp', Video, '/meetings'],
   ],
 };
 
