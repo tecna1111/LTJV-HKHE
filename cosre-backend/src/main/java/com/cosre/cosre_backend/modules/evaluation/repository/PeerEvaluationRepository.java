@@ -9,8 +9,12 @@ import java.util.Optional;
 
 public interface PeerEvaluationRepository extends JpaRepository<PeerEvaluation, Long> {
 
+    boolean existsByProjectId(Long projectId);
+
     // Các bài mà 1 sinh viên đã CHẤM cho người khác (given)
     List<PeerEvaluation> findByEvaluatorIdAndProjectId(Long evaluatorId, Long projectId);
+
+
 
     // Các bài mà 1 sinh viên ĐƯỢC chấm bởi người khác (received)
     List<PeerEvaluation> findByEvaluateeIdAndProjectId(Long evaluateeId, Long projectId);
@@ -22,6 +26,6 @@ public interface PeerEvaluationRepository extends JpaRepository<PeerEvaluation, 
 
     // Dùng để kiểm tra đã tồn tại bài đánh giá cho cặp evaluator-evaluatee-milestone chưa,
     // phục vụ upsert khi sinh viên sửa lại bài đã nộp (miễn là chưa LOCKED).
-    Optional<PeerEvaluation> findByEvaluatorIdAndEvaluateeIdAndProjectIdAndMilestoneId(
-            Long evaluatorId, Long evaluateeId, Long projectId, Long milestoneId);
+    Optional<PeerEvaluation> findByEvaluatorIdAndEvaluateeIdAndProjectIdAndTeamIdAndMilestoneId(
+            Long evaluatorId, Long evaluateeId, Long projectId, Long teamId, Long milestoneId);
 }
