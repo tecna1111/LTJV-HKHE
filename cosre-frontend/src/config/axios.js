@@ -57,6 +57,15 @@ api.interceptors.response.use(
 );
 
 export function getApiError(error, fallback = 'Đã xảy ra lỗi. Vui lòng thử lại.') {
+  const response = error.response;
+  if (!response && error.isAxiosError) return 'Không kết nối được máy chủ. Vui lòng kiểm tra backend và kết nối mạng.';
+  if (response?.data?.message === 'Validation failed' && response.data.data) {
+    return Object.values(response.data.data).join('; ');
+  }
+  if (!response?.data?.message && response?.status === 403)
+    return 'Máy chủ từ chối yêu cầu (403). Vui lòng kiểm tra tài khoản và quyền giảng viên.';
+  if (!response?.data?.message && response?.status >= 500)
+    return `Máy chủ gặp lỗi (${response.status}). Vui lòng kiểm tra log backend.`;
   return error.response?.data?.message || fallback;
 }
 
