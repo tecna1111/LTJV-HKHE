@@ -1,0 +1,10 @@
+.milestone-questions-page{max-width:960px;margin:32px auto;padding:24px;color:#172033}
+.milestone-questions-page form,.milestone-question{display:grid;gap:14px;margin:20px 0;padding:20px;border:1px solid #d8e0ea;border-radius:12px;background:white}
+.milestone-questions-page label{display:grid;gap:8px;font-weight:600}
+.milestone-questions-page textarea,.milestone-questions-page input,.milestone-questions-page select{width:100%;box-sizing:border-box;padding:10px;border:1px solid #b9c6d8;border-radius:8px;font:inherit}
+.milestone-questions-page textarea{min-height:100px}
+.milestone-questions-page button{width:max-content;padding:9px 16px;border:1px solid #446ac2;border-radius:8px;background:#eef3ff;color:#173a89;cursor:pointer}
+.milestone-questions-page button:disabled{opacity:.5;cursor:not-allowed}
+.milestone-question article{padding:16px;background:#f7f9fc;border-radius:8px}
+.milestone-question-actions{display:flex;gap:8px}
+.milestone-questions-error{padding:12px;border-radius:8px;background:#fff1f2;color:#9f1239}

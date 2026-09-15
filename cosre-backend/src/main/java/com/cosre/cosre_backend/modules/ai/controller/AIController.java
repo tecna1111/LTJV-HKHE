@@ -4,6 +4,8 @@ import com.cosre.cosre_backend.modules.ai.dto.ChatRequest;
 import com.cosre.cosre_backend.modules.ai.dto.ChatResponse;
 import com.cosre.cosre_backend.modules.ai.dto.GenerateMilestonesRequest;
 import com.cosre.cosre_backend.modules.ai.dto.GenerateMilestonesResponse;
+import com.cosre.cosre_backend.modules.ai.dto.GenerateProjectDraftRequest;
+import com.cosre.cosre_backend.modules.ai.dto.GenerateProjectDraftResponse;
 import com.cosre.cosre_backend.modules.ai.service.AIService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -56,6 +58,14 @@ public class AIController {
                         response
                 )
         );
+    }
+
+    @PostMapping("/projects/draft")
+    @PreAuthorize("hasRole('LECTURER')")
+    public ResponseEntity<ApiResponse<GenerateProjectDraftResponse>> generateProjectDraft(
+            @Valid @RequestBody GenerateProjectDraftRequest request, Authentication auth) {
+        return ResponseEntity.ok(new ApiResponse<>(true, "Project draft generated",
+                aiService.generateProjectDraft(request, auth.getName())));
     }
 
     @GetMapping("/test")
