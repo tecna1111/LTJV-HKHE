@@ -87,6 +87,11 @@ function TeamManagementPage() {
     if (!raw) return;
     await run(`add-${team.id}`, () => addTeamMember(team.id, Number(raw)), 'Đã thêm thành viên.');
   };
+  const chooseLeader = async (team, member) => {
+    if (busy || team.leader?.id === member.id) return;
+    await run(`leader-${team.id}-${member.id}`, () => addTeamMember(team.id, member.id, true),
+      `Đã chọn ${member.fullName || member.username} làm trưởng nhóm.`);
+  };
   const chooseProject = async (team) => {
     setBusy(`project-${team.id}`);
     setFeedback({ type: '', text: '' });
@@ -125,7 +130,20 @@ function TeamManagementPage() {
               <button className="team-project" onClick={() => navigate(`/teams/${team.id}/workspace`)}><FolderKanban size={17} /> Mở workspace</button>
               <button disabled={busy === `project-${team.id}`} className={`team-project ${team.projectId ? 'selected' : ''}`} onClick={() => chooseProject(team)}><BookOpenCheck size={17} />{busy === `project-${team.id}` ? 'Đang tải đề tài…' : team.projectId ? `Đề tài #${team.projectId}` : 'Chọn đề tài'} </button>
               <div className="team-members-title"><strong>Thành viên ({team.members.length})</strong><button onClick={() => addMember(team)}><UserPlus size={15} /> Thêm</button></div>
-              <div className="team-members">{team.members.map((member) => <div key={member.id}><span>{member.fullName.slice(0, 1).toUpperCase()}</span><div><strong>{member.fullName}</strong><small>@{member.username}</small></div>{team.leader?.id === member.id && <Crown size={15} className="leader" />}<button aria-label={`Xóa ${member.fullName}`} onClick={() => run(`remove-${team.id}-${member.id}`, () => removeTeamMember(team.id, member.id), 'Đã xóa thành viên.')}><X size={14} /></button></div>)}</div>
+              <div className="team-members">{team.members.map((member) => <div key={member.id}>
+                <span>{(member.fullName || member.username).slice(0, 1).toUpperCase()}</span>
+                <div>
+                  <strong>{member.fullName || member.username}</strong><small>@{member.username}</small>
+                  {team.leader?.id === member.id
+                    ? <small className="team-leader-label"><Crown size={13} /> Trưởng nhóm</small>
+                    : <button type="button" className="team-set-leader" disabled={Boolean(busy)}
+                        aria-label={`Đặt ${member.fullName || member.username} làm trưởng nhóm`}
+                        onClick={() => chooseLeader(team, member)}>
+                        <Crown size={13} />{busy === `leader-${team.id}-${member.id}` ? 'Đang lưu…' : 'Đặt làm trưởng nhóm'}
+                      </button>}
+                </div>
+                <button disabled={Boolean(busy)} aria-label={`Xóa ${member.fullName}`} onClick={() => run(`remove-${team.id}-${member.id}`, () => removeTeamMember(team.id, member.id), 'Đã xóa thành viên.')}><X size={14} /></button>
+              </div>)}</div>
             </article>
           ))}</div>}
         </div>
