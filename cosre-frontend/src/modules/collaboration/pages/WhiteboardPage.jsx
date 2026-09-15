@@ -1,143 +1,102 @@
 import { useEffect, useRef, useState } from 'react';
-import { Canvas, PencilBrush } from 'fabric';
-import { ArrowLeft, Brush, Download, Eraser, MousePointer2, Redo2, RotateCcw, Save, Trash2, Undo2 } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Canvas, PencilBrush, Path } from 'fabric';
+import { Link, useParams } from 'react-router-dom';
 import { DashboardShell } from '../../dashboard/pages/DashboardPage';
 import useAuthStore from '../../../store/useAuthStore';
-import { getApiError } from '../../../config/axios';
-import { getWhiteboard, saveWhiteboard } from '../collaborationService';
+import useCollaboration from '../useCollaboration';
+import CollaborationStatus from './CollaborationStatus';
 import './WhiteboardPage.css';
 
 const COLORS = ['#0f172a', '#2563eb', '#dc2626', '#16a34a', '#9333ea', '#f59e0b'];
-
 export default function WhiteboardPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const role = useAuthStore((state) => state.role);
-  const displayName = useAuthStore((state) => state.fullName || state.username);
-  const elementRef = useRef(null);
-  const canvasRef = useRef(null);
-  const undoRef = useRef([]);
-  const redoRef = useRef([]);
-  const restoringRef = useRef(false);
-  const [color, setColor] = useState(COLORS[0]);
-  const [width, setWidth] = useState(4);
-  const [mode, setMode] = useState('draw');
-  const [version, setVersion] = useState(0);
-  const [status, setStatus] = useState('Đang tải bảng vẽ…');
-  const [dirty, setDirty] = useState(false);
-
-  const snapshot = (canvas) => JSON.stringify(canvas.toJSON());
-  const remember = (canvas) => {
-    if (restoringRef.current) return;
-    undoRef.current.push(snapshot(canvas));
-    if (undoRef.current.length > 50) undoRef.current.shift();
-    redoRef.current = [];
-    setDirty(true);
-  };
-
+  const role = useAuthStore(s => s.role), displayName = useAuthStore(s => s.fullName || s.username);
+  const session = useCollaboration(id, 'whiteboard');
+  const live = useRef(session);
+  const element = useRef(null), canvas = useRef(null), dragging = useRef(false);
+  const [color, setColor] = useState(COLORS[0]), [width, setWidth] = useState(4), [mode, setMode] = useState('draw');
+  const [error, setError] = useState(''), [renderTick, setRenderTick] = useState(0);
+  useEffect(() => { live.current = session; }, [session]);
   useEffect(() => {
-    const canvas = new Canvas(elementRef.current, { isDrawingMode: true, backgroundColor: '#ffffff', preserveObjectStacking: true });
-    canvas.setDimensions({ width: Math.max(760, Math.min(1280, window.innerWidth - 330)), height: 620 });
-    canvas.freeDrawingBrush = new PencilBrush(canvas);
-    canvas.freeDrawingBrush.color = COLORS[0];
-    canvas.freeDrawingBrush.width = 4;
-    canvas.on('path:created', () => remember(canvas));
-    canvas.on('object:modified', () => remember(canvas));
-    canvas.on('object:removed', () => remember(canvas));
-    canvasRef.current = canvas;
-
-    getWhiteboard(id).then(async (data) => {
-      restoringRef.current = true;
-      await canvas.loadFromJSON(data.canvasData);
-      canvas.backgroundColor = '#ffffff';
-      canvas.renderAll();
-      setVersion(data.version);
-      undoRef.current = [snapshot(canvas)];
-      setStatus(data.updatedAt ? `Đã tải phiên bản ${data.version}` : 'Bảng vẽ mới');
-      setDirty(false);
-      restoringRef.current = false;
-    }).catch((error) => setStatus(getApiError(error, 'Không thể tải bảng vẽ.')));
-
-    return () => canvas.dispose();
-  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
-
+    const board = new Canvas(element.current, { isDrawingMode: true, backgroundColor: '#ffffff', preserveObjectStacking: true });
+    board.setDimensions({ width: 1200, height: 650 });
+    board.freeDrawingBrush = new PencilBrush(board);
+    board.freeDrawingBrush.color = COLORS[0]; board.freeDrawingBrush.width = 4;
+    canvas.current = board;
+    const put = object => {
+      object.collaborationId ||= crypto.randomUUID();
+      const objectId = object.collaborationId;
+      try {
+        live.current.enqueue({ operationId: crypto.randomUUID(), action: 'object.put', payload: {
+          id: objectId, expectedVersion: live.current.state[objectId]?.version || 0, value: object.toObject(),
+        } }); setError('');
+      } catch (e) { setError(e.message); setRenderTick(v => v + 1); }
+    };
+    board.on('path:created', e => put(e.path));
+    board.on('object:modified', e => { if (e.target && e.target.type !== 'activeselection') put(e.target); });
+    board.on('mouse:down', () => { dragging.current = true; });
+    board.on('mouse:up', () => { dragging.current = false; setRenderTick(v => v + 1); });
+    return () => { canvas.current = null; void board.dispose(); };
+  }, [id]);
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas?.freeDrawingBrush) return;
-    canvas.freeDrawingBrush.color = color;
-    canvas.freeDrawingBrush.width = Number(width);
-  }, [color, width]);
-
+    const board = canvas.current;
+    if (!board) return;
+    board.isDrawingMode = session.ready && !session.blocked && mode === 'draw';
+    board.selection = false; board.selectionKey = null;
+    board.skipTargetFind = !session.ready || session.blocked || mode === 'draw';
+    board.freeDrawingBrush.color = color; board.freeDrawingBrush.width = Number(width);
+  }, [color, width, mode, session.ready, session.blocked]);
   useEffect(() => {
-    if (canvasRef.current) canvasRef.current.isDrawingMode = mode === 'draw';
-  }, [mode]);
-
-  const restore = async (json) => {
-    const canvas = canvasRef.current;
-    restoringRef.current = true;
-    await canvas.loadFromJSON(json);
-    canvas.backgroundColor = '#ffffff';
-    canvas.renderAll();
-    restoringRef.current = false;
-    setDirty(true);
-  };
-
-  const undo = async () => {
-    if (undoRef.current.length <= 1) return;
-    redoRef.current.push(undoRef.current.pop());
-    await restore(undoRef.current.at(-1));
-  };
-  const redo = async () => {
-    const next = redoRef.current.pop();
-    if (!next) return;
-    undoRef.current.push(next);
-    await restore(next);
-  };
-  const eraseSelection = () => {
-    const canvas = canvasRef.current;
-    const selected = canvas.getActiveObjects();
-    if (!selected.length) return;
-    selected.forEach((object) => canvas.remove(object));
-    canvas.discardActiveObject();
-    canvas.renderAll();
-  };
-  const clear = () => {
-    const canvas = canvasRef.current;
-    if (!window.confirm('Xóa toàn bộ nội dung trên bảng vẽ?')) return;
-    canvas.getObjects().forEach((object) => canvas.remove(object));
-    canvas.renderAll();
-  };
-  const save = async () => {
-    const canvas = canvasRef.current;
-    setStatus('Đang lưu…');
-    try {
-      const data = await saveWhiteboard(id, snapshot(canvas), version);
-      setVersion(data.version);
-      setDirty(false);
-      setStatus(`Đã lưu phiên bản ${data.version}`);
-    } catch (error) {
-      setStatus(error.response?.status === 409 ? 'Bảng đã được cập nhật ở nơi khác. Hãy tải lại trang.' : getApiError(error, 'Lưu bảng vẽ thất bại.'));
+    const board = canvas.current;
+    if (!board || dragging.current) return;
+    let cancelled = false;
+    const render = async () => {
+      const wanted = session.ready ? Object.entries(session.state).filter(([, item]) => !item.deleted) : [];
+      const objects = await Promise.all(wanted.map(async ([objectId, item]) => {
+        const path = await Path.fromObject(item.value);
+        path.collaborationId = objectId; return path;
+      }));
+      if (cancelled || dragging.current || canvas.current !== board) return;
+      const selected = board.getActiveObject()?.collaborationId;
+      board.discardActiveObject(); board.remove(...board.getObjects());
+      board.add(...objects);
+      const active = objects.find(o => o.collaborationId === selected);
+      if (active) board.setActiveObject(active);
+      board.requestRenderAll();
+    };
+    void render().catch(e => { if (!cancelled) setError(`Không thể hiển thị bảng: ${e.message}`); });
+    return () => { cancelled = true; };
+  }, [session.state, session.ready, renderTick]);
+  const remove = all => {
+    const objects = all ? canvas.current.getObjects() : canvas.current.getActiveObjects();
+    if (all && !window.confirm('Xóa các nét vẽ đang hiển thị? Nét mới của người khác sẽ được giữ.')) return;
+    for (const object of objects) {
+      const objectId = object.collaborationId;
+      try { session.enqueue({ operationId: crypto.randomUUID(), action: 'object.delete', payload: {
+        id: objectId, expectedVersion: session.state[objectId]?.version || 0,
+      } }); setError(''); } catch (e) { setError(e.message); break; }
     }
   };
   const download = () => {
-    const link = document.createElement('a');
-    link.download = `cosre-whiteboard-team-${id}.png`;
-    link.href = canvasRef.current.toDataURL({ format: 'png', multiplier: 2 });
-    link.click();
+    const a = document.createElement('a'); a.download = `whiteboard-${id}.png`;
+    a.href = canvas.current.toDataURL({ format: 'png' }); a.click();
   };
-
-  return <DashboardShell role={role} displayName={displayName} pageTitle="Bảng vẽ nhóm" activePath="">
-    <div className="whiteboard-page">
-      <header><div><button className="whiteboard-back" onClick={() => navigate(`/teams/${id}/workspace`)}><ArrowLeft size={17}/> Workspace</button><span>COLLABORATION</span><h1>Bảng vẽ nhóm #{id}</h1><p>Phác thảo ý tưởng, sơ đồ và kế hoạch trực quan.</p></div><div className={dirty ? 'save-state dirty' : 'save-state'}>{dirty ? 'Có thay đổi chưa lưu' : status}</div></header>
+  return <DashboardShell role={role} displayName={displayName} pageTitle="Bảng vẽ nhóm">
+    <main className="whiteboard-page">
+      <header><div><Link to={`/teams/${id}/workspace`}>← Workspace</Link><h1>Bảng vẽ nhóm #{id}</h1><p>Cùng phác thảo ý tưởng. Mỗi nét được lưu tự động.</p></div>
+        <Link to={`/teams/${id}/document`}>Mở tài liệu nhóm</Link></header>
+      <CollaborationStatus session={session}/>
+      {error && <p role="alert" className="collaboration-error">{error}</p>}
       <section className="whiteboard-toolbar">
-        <div className="mode-buttons"><button className={mode === 'draw' ? 'active' : ''} onClick={() => setMode('draw')}><Brush size={17}/> Vẽ</button><button className={mode === 'select' ? 'active' : ''} onClick={() => setMode('select')}><MousePointer2 size={17}/> Chọn</button></div>
-        <div className="color-list">{COLORS.map((item) => <button key={item} aria-label={`Màu ${item}`} className={color === item ? 'active' : ''} style={{background:item}} onClick={() => setColor(item)}/>)}</div>
-        <label>Độ dày <input type="range" min="1" max="24" value={width} onChange={(event) => setWidth(event.target.value)}/><b>{width}px</b></label>
-        <div className="toolbar-actions"><button onClick={undo} title="Hoàn tác"><Undo2 size={17}/></button><button onClick={redo} title="Làm lại"><Redo2 size={17}/></button><button onClick={eraseSelection} title="Xóa đối tượng đã chọn"><Eraser size={17}/></button><button onClick={clear} title="Xóa toàn bộ"><Trash2 size={17}/></button><button onClick={download} title="Tải PNG"><Download size={17}/></button><button className="save-button" onClick={save}><Save size={17}/> Lưu bảng</button></div>
+        <button onClick={() => setMode('draw')} aria-pressed={mode === 'draw'}>Vẽ</button>
+        <button onClick={() => setMode('select')} aria-pressed={mode === 'select'}>Chọn / di chuyển</button>
+        <div className="color-list">{COLORS.map(c => <button key={c} aria-label={`Màu ${c}`} className={c === color ? 'active' : ''} style={{ background: c }} onClick={() => setColor(c)}/>)}</div>
+        <label>Độ dày <input type="range" min="1" max="24" value={width} onChange={e => setWidth(e.target.value)}/>{width}</label>
+        <button disabled={!session.ready || session.blocked} onClick={() => remove(false)}>Xóa nét đã chọn</button>
+        <button disabled={!session.ready || session.blocked} onClick={() => remove(true)}>Xóa bảng</button><button onClick={download}>Tải PNG</button>
       </section>
-      <div className="canvas-shell"><canvas ref={elementRef}/></div>
-      <footer><RotateCcw size={15}/> Chọn nét vẽ để di chuyển; dùng nút tẩy để xóa đối tượng đang chọn.</footer>
-    </div>
+      <div className="canvas-shell"><canvas ref={element}/></div>
+      <footer>Hai người sửa cùng nét: thao tác đến sau được giữ trong bản nháp và báo xung đột, không ghi đè bản đã lưu.</footer>
+    </main>
   </DashboardShell>;
 }

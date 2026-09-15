@@ -123,16 +123,47 @@ public class NotificationService {
         }
     }
 
-    /** Shared event boundary for resource, milestone, checkpoint, evaluation, team-leader and incident owners.
-     * Callers supply one immutable business event id; this service owns recipient delivery and deduplication. */
     public void notifyEvent(Set<User> recipients, String eventId, String type, String title, String message, String link) {
+        publishEvent(recipients, eventId, type, title, message, link, true);
+    }
+
+    public void notifyInAppEvent(Set<User> recipients, String eventId, String type, String title, String message, String link) {
+        publishEvent(recipients, eventId, type, title, message, link, false);
+    }
+
+    public void notifyTeamEvent(Long teamId, String actorUsername, String eventId, String type,
+                                String title, String message, String link) {
+        var team = teamRepository.findById(teamId).orElseThrow(() -> new ResourceNotFoundException("Team not found"));
+        Set<User> recipients = new LinkedHashSet<>(team.getMembers());
+        recipients.add(team.getLecturer());
+        recipients.removeIf(user -> user.getUsername().equals(actorUsername));
+        notifyInAppEvent(recipients, eventId, type, title, message, link);
+    }
+
+    public void notifyClassroomEvent(Long classroomId, String actorUsername, String eventId, String type,
+                                     String title, String message, String link) {
+        var classroom = classroomRepository.findDetailedById(classroomId)
+                .orElseThrow(() -> new ResourceNotFoundException("Classroom not found"));
+        Set<User> recipients = new LinkedHashSet<>(classroom.getLecturers());
+        recipients.addAll(classroom.getStudents());
+        recipients.removeIf(user -> user.getUsername().equals(actorUsername));
+        notifyInAppEvent(recipients, eventId, type, title, message, link);
+    }
+
+    public void notifyUserEvent(Long userId, String eventId, String type, String title, String message, String link) {
+        var user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        notifyInAppEvent(Set.of(user), eventId, type, title, message, link);
+    }
+
+    private void publishEvent(Set<User> recipients, String eventId, String type, String title,
+                              String message, String link, boolean sendEmail) {
         if (eventId == null || eventId.isBlank()) throw new IllegalArgumentException("A stable notification event id is required");
         for (User recipient : recipients) {
             if (!recipient.isActive() || repository.existsByUserIdAndEventKey(recipient.getId(), eventId)) continue;
             Notification value = new Notification(); value.setUserId(recipient.getId()); value.setEventKey(eventId);
             value.setType(type); value.setTitle(title); value.setMessage(message); value.setLink(link);
             NotificationResponse response = NotificationResponse.from(repository.save(value));
-            emailDeliveryService.enqueue(recipient, value, eventId);
+            if (sendEmail) emailDeliveryService.enqueue(recipient, value, eventId);
             messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/notifications", response);
         }
     }

@@ -21,12 +21,15 @@ public class WebSocketJwtInterceptor implements ChannelInterceptor {
     private final JwtConfig jwtConfig;
     private final AccountService accountService;
     private final ChatRoomAccessService chatRoomAccessService;
+    private final com.cosre.cosre_backend.modules.collaboration.service.CollaborationAccessService collaborationAccess;
 
     public WebSocketJwtInterceptor(JwtConfig jwtConfig, AccountService accountService,
-            ChatRoomAccessService chatRoomAccessService) {
+            ChatRoomAccessService chatRoomAccessService,
+            com.cosre.cosre_backend.modules.collaboration.service.CollaborationAccessService collaborationAccess) {
         this.jwtConfig = jwtConfig;
         this.accountService = accountService;
         this.chatRoomAccessService = chatRoomAccessService;
+        this.collaborationAccess = collaborationAccess;
     }
 
     @Override
@@ -36,6 +39,10 @@ public class WebSocketJwtInterceptor implements ChannelInterceptor {
         // retained for later SUBSCRIBE and SEND frames.
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
         if (accessor == null) return message;
+        if (StompCommand.SEND.equals(accessor.getCommand())) {
+            authorizeSend(accessor);
+            return message;
+        }
         if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
             authorizeSubscription(accessor);
             return message;
@@ -48,7 +55,8 @@ public class WebSocketJwtInterceptor implements ChannelInterceptor {
         }
 
         String token = header.substring(7);
-        if (!jwtConfig.validateToken(token)) throw new AccessDeniedException("Invalid WebSocket authorization token");
+        if (!jwtConfig.validateToken(token) || !jwtConfig.isAccessToken(token)) throw new AccessDeniedException("Invalid WebSocket authorization token");
+        if (accessor.getSessionAttributes() != null) accessor.getSessionAttributes().put("accessToken", token);
 
         String username = jwtConfig.getUsername(token);
         var user = accountService.findByUsername(username)
@@ -63,9 +71,16 @@ public class WebSocketJwtInterceptor implements ChannelInterceptor {
 
     private void authorizeSubscription(StompHeaderAccessor accessor) {
         String destination = accessor.getDestination();
-        if (destination == null || destination.equals("/user/queue/notifications")) return;
         String username = accessor.getUser() == null ? null : accessor.getUser().getName();
         if (username == null) throw new AccessDeniedException("Unauthenticated WebSocket subscription");
+        requireActive(accessor, username);
+        if ("/user/queue/notifications".equals(destination) || "/user/queue/collaboration".equals(destination)) return;
+        if (destination == null) throw new AccessDeniedException("Missing destination");
+        var collaboration = java.util.regex.Pattern.compile("^/topic/collaboration/teams/([0-9]+)/(whiteboard|text)$").matcher(destination);
+        if (collaboration.matches()) {
+            collaborationAccess.requireAccess(parseId(collaboration.group(1)), username);
+            return;
+        }
         String teamPrefix = "/topic/chat/teams/";
         String classroomPrefix = "/topic/chat/classrooms/";
         try {
@@ -81,5 +96,35 @@ public class WebSocketJwtInterceptor implements ChannelInterceptor {
         } catch (NumberFormatException exception) {
             throw new AccessDeniedException("Invalid WebSocket destination");
         }
+    }
+
+    private long parseId(String id) {
+        try { return Long.parseLong(id); }
+        catch (NumberFormatException e) { throw new AccessDeniedException("Invalid destination ID"); }
+    }
+    private void requireActive(StompHeaderAccessor accessor, String username) {
+        Object token = accessor.getSessionAttributes() == null ? null : accessor.getSessionAttributes().get("accessToken");
+        if (!(token instanceof String value) || !jwtConfig.validateToken(value) || !jwtConfig.isAccessToken(value))
+            throw new AccessDeniedException("WebSocket session expired; reconnect with a new access token");
+        accountService.findByUsername(username).filter(u -> u.isActive())
+                .orElseThrow(() -> new AccessDeniedException("Inactive WebSocket user"));
+    }
+    private void authorizeSend(StompHeaderAccessor accessor) {
+        String username = accessor.getUser() == null ? null : accessor.getUser().getName();
+        if (username == null) throw new AccessDeniedException("Unauthenticated WebSocket send");
+        requireActive(accessor, username);
+        String destination = accessor.getDestination();
+        if (destination == null) throw new AccessDeniedException("Missing destination");
+        var collaboration = java.util.regex.Pattern.compile("^/app/collaboration/teams/([0-9]+)/(whiteboard|text)/operations$").matcher(destination);
+        if (collaboration.matches()) {
+            collaborationAccess.requireAccess(parseId(collaboration.group(1)), username);
+            return;
+        }
+        var chat = java.util.regex.Pattern.compile("^/app/chat/(teams|classrooms)/([0-9]+)/send$").matcher(destination);
+        if (chat.matches()) {
+            chatRoomAccessService.requireAccess(username, chat.group(1).equals("teams") ? ChatRoomType.TEAM : ChatRoomType.CLASSROOM, parseId(chat.group(2)));
+            return;
+        }
+        throw new AccessDeniedException("WebSocket send destination is not allowed");
     }
 }

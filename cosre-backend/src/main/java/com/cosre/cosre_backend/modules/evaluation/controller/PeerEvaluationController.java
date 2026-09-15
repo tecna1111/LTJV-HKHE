@@ -7,6 +7,7 @@ import com.cosre.cosre_backend.modules.evaluation.dto.request.PeerEvaluationSubm
 import com.cosre.cosre_backend.modules.evaluation.dto.response.PeerEvaluationResponse;
 import com.cosre.cosre_backend.modules.evaluation.dto.response.StudentEvaluationSummaryResponse;
 import com.cosre.cosre_backend.modules.evaluation.service.PeerEvaluationService;
+import com.cosre.cosre_backend.modules.notification.service.NotificationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,6 +23,7 @@ public class PeerEvaluationController {
 
     private final PeerEvaluationService peerEvaluationService;
     private final AccountService accountService;
+    private final NotificationService notifications;
 
     // Sinh viên nộp (hoặc nộp lại) bài đánh giá chéo cho 1 thành viên trong nhóm
     @PostMapping
@@ -29,7 +31,12 @@ public class PeerEvaluationController {
     public ApiResponse<PeerEvaluationResponse> submit(@Valid @RequestBody PeerEvaluationSubmitRequest request,
             Authentication authentication) {
         Long evaluatorId = currentUserId(authentication);
-        return ApiResponse.success(peerEvaluationService.submit(evaluatorId, request), "Nộp đánh giá thành công");
+        var result = peerEvaluationService.submit(evaluatorId, request);
+        notifications.notifyUserEvent(request.getEvaluateeId(),
+                "PEER_EVALUATION:" + result.getId() + ":" + result.getSubmittedAt(),
+                "PEER_EVALUATION", "Bạn có đánh giá mới", "Một thành viên đã gửi đánh giá chéo cho bạn.",
+                "/peer-evaluations");
+        return ApiResponse.success(result, "Nộp đánh giá thành công");
     }
 
     // Các bài mà chính mình đã chấm cho người khác

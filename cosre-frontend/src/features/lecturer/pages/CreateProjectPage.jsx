@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import ObjectiveListEditor from "../components/ObjectiveListEditor";
@@ -7,6 +7,7 @@ import {
   fetchAssignedSubjects,
   fetchSyllabus,
   generateMilestonesWithAI,
+  generateProjectDraftWithAI,
   createProject,
   submitProjectForApproval,
   updateProject,
@@ -14,11 +15,6 @@ import {
 import { getApiError } from "../../../config/axios";
 import "../styles/CreateProjectPage.css";
 
-/**
- * CreateProjectPage
- * Màn hình Giảng viên: Tạo dự án dựa trên đề cương môn học, dùng AI
- * để gợi ý cột mốc, rồi lưu nháp hoặc gửi Trưởng bộ môn phê duyệt.
- */
 export default function CreateProjectPage() {
   const [subjects, setSubjects] = useState([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
@@ -31,20 +27,21 @@ export default function CreateProjectPage() {
 
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
+  const [aiSuggestions, setAiSuggestions] = useState(null);
+  const [projectSuggestion, setProjectSuggestion] = useState(null);
+  const aiRequestVersion = useRef(0);
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [savedProject, setSavedProject] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
 
-  // Tải danh sách môn học được phân công khi vào trang
   useEffect(() => {
     fetchAssignedSubjects()
       .then(setSubjects)
       .catch(() => setSaveError("Không tải được danh sách môn học."));
   }, []);
 
-  // Khi chọn môn học, tải đề cương tương ứng để dùng cho AI sinh mốc
   useEffect(() => {
     let cancelled = false;
     if (!selectedSubjectId) {
@@ -54,9 +51,8 @@ export default function CreateProjectPage() {
       .then((data) => {
         if (cancelled) return;
         setSyllabus(data);
-        // Gợi ý mục tiêu từ đề cương nếu Giảng viên chưa nhập gì
         if (objectives.length === 1 && objectives[0] === "" && data.objectives) {
-          setObjectives(data.objectives);
+          setObjectives(Array.isArray(data.objectives) ? data.objectives : data.objectives.split('\n').filter(Boolean));
         }
       })
       .catch(() => {
@@ -79,16 +75,34 @@ export default function CreateProjectPage() {
     }
     setAiLoading(true);
     setAiError(null);
+    setAiSuggestions(null);
+    const version = ++aiRequestVersion.current;
     try {
       const suggested = await generateMilestonesWithAI({
         syllabusId: syllabus.id,
         objectives: cleanObjectives,
       });
-      setMilestones(suggested);
+      if (version === aiRequestVersion.current) setAiSuggestions(suggested);
     } catch (error) {
-      setAiError(getApiError(error, "AI không tạo được mốc lúc này. Vui lòng thử lại hoặc thêm mốc thủ công."));
+      if (version === aiRequestVersion.current) setAiError(getApiError(error, "AI không tạo được mốc lúc này. Vui lòng thử lại hoặc thêm mốc thủ công."));
     } finally {
-      setAiLoading(false);
+      if (version === aiRequestVersion.current) setAiLoading(false);
+    }
+  };
+
+  const handleGenerateProjectAI = async () => {
+    if (!syllabus) { setAiError('Vui lòng chọn môn học có đề cương trước khi dùng AI.'); return; }
+    setAiLoading(true);
+    setAiError(null);
+    setProjectSuggestion(null);
+    const version = ++aiRequestVersion.current;
+    try {
+      const draft = await generateProjectDraftWithAI({ syllabusId: syllabus.id, topic: title.trim() });
+      if (version === aiRequestVersion.current) setProjectSuggestion(draft);
+    } catch (error) {
+      if (version === aiRequestVersion.current) setAiError(getApiError(error, 'AI chưa tạo được gợi ý dự án.'));
+    } finally {
+      if (version === aiRequestVersion.current) setAiLoading(false);
     }
   };
 
@@ -189,6 +203,11 @@ export default function CreateProjectPage() {
           className="subject-select"
           value={selectedSubjectId}
           onChange={(e) => {
+            aiRequestVersion.current += 1;
+            setAiLoading(false);
+            setAiSuggestions(null);
+            setProjectSuggestion(null);
+            setAiError(null);
             setSyllabus(null);
             setSelectedSubjectId(e.target.value);
           }}
@@ -211,6 +230,11 @@ export default function CreateProjectPage() {
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Ví dụ: Xây dựng hệ thống quản lý thư viện"
         />
+        <button type="button" className="btn-ai-generate" disabled={aiLoading || !syllabus}
+          onClick={handleGenerateProjectAI}>
+          {aiLoading ? 'AI đang gợi ý...' : '✨ AI gợi ý thông tin dự án'}
+        </button>
+        {aiError && <p className="ai-error" role="alert">{aiError}</p>}
       </section>
 
       <section className="form-section">
@@ -236,6 +260,43 @@ export default function CreateProjectPage() {
           aiError={aiError}
         />
       </section>
+
+      {aiSuggestions && (
+        <section className="form-section" aria-label="Xem trước đề xuất AI">
+          <h2>Xem trước đề xuất AI</h2>
+          <p>Bạn có thể chỉnh sửa trước khi áp dụng. Áp dụng sẽ thay danh sách mốc trong form; dự án chỉ được lưu khi bạn bấm Lưu nháp hoặc Gửi duyệt.</p>
+          <MilestoneEditor milestones={aiSuggestions} onChange={setAiSuggestions} />
+          <div className="action-bar">
+            <button type="button" className="btn-secondary" onClick={() => setAiSuggestions(null)}>Hủy đề xuất</button>
+            <button type="button" className="btn-primary" onClick={() => {
+              setMilestones(aiSuggestions);
+              setAiSuggestions(null);
+            }}>Áp dụng đề xuất</button>
+          </div>
+        </section>
+      )}
+
+      {projectSuggestion && (
+        <section className="form-section" aria-label="Xem trước dự án do AI gợi ý">
+          <h2>Xem trước dự án do AI gợi ý</h2>
+          <p>Gợi ý chỉ được đưa vào form khi bạn bấm Áp dụng. Bạn có thể sửa mọi thông tin trước khi lưu.</p>
+          <h3>{projectSuggestion.title}</h3>
+          <p>{projectSuggestion.description}</p>
+          <ul>{projectSuggestion.objectives.map((objective, index) => <li key={index}>{objective}</li>)}</ul>
+          <ol>{projectSuggestion.milestones.map((milestone, index) =>
+            <li key={index}>{milestone.title} — {milestone.dueOffsetDays} ngày</li>)}</ol>
+          <div className="action-bar">
+            <button type="button" className="btn-secondary" onClick={() => setProjectSuggestion(null)}>Hủy gợi ý</button>
+            <button type="button" className="btn-primary" onClick={() => {
+              setTitle(projectSuggestion.title);
+              setDescription(projectSuggestion.description);
+              setObjectives(projectSuggestion.objectives);
+              setMilestones(projectSuggestion.milestones);
+              setProjectSuggestion(null);
+            }}>Áp dụng vào dự án</button>
+          </div>
+        </section>
+      )}
 
       <div className="action-bar">
         <button

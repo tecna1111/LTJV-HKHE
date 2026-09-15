@@ -9,12 +9,13 @@ import com.cosre.cosre_backend.modules.ai.dto.ChatRequest;
 import com.cosre.cosre_backend.modules.ai.dto.ChatResponse;
 import com.cosre.cosre_backend.modules.ai.dto.GenerateMilestonesRequest;
 import com.cosre.cosre_backend.modules.ai.dto.GenerateMilestonesResponse;
+import com.cosre.cosre_backend.modules.ai.dto.GenerateProjectDraftRequest;
+import com.cosre.cosre_backend.modules.ai.dto.GenerateProjectDraftResponse;
 import com.cosre.cosre_backend.modules.ai.dto.GenerateMilestonesResponse.GeneratedMilestone;
 import com.cosre.cosre_backend.modules.ai.entity.ChatHistory;
 import com.cosre.cosre_backend.modules.ai.repository.ChatHistoryRepository;
 import com.cosre.cosre_backend.modules.syllabus.entity.Syllabus;
 import com.cosre.cosre_backend.modules.syllabus.repository.SyllabusRepository;
-import com.cosre.cosre_backend.modules.team.service.TeamAccessService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;
@@ -43,27 +44,36 @@ public class AIService {
 
     private static final int MIN_MILESTONES = 3;
     private static final int MAX_MILESTONES = 8;
+    private static final String PROJECT_DRAFT_SYSTEM_PROMPT = """
+            Bạn là trợ lý gợi ý đề tài đồ án học thuật. Chỉ trả về một object JSON hợp lệ,
+            không thêm Markdown hoặc giải thích. Schema:
+            {"title":"...","description":"...","objectives":["..."],
+             "milestones":[{"title":"...","description":"...","dueOffsetDays":7}]}
+            Title ngắn gọn, description mô tả phạm vi dự án, objectives là 2 đến 10 mục tiêu cụ thể.
+            Tạo 3 đến 8 milestones; dueOffsetDays là số nguyên dương tăng dần.
+            """;
 
     private final AIClient aiClient;
     private final ChatHistoryRepository chatHistoryRepository;
     private final UserRepository userRepository;
     private final SyllabusRepository syllabusRepository;
-    private final TeamAccessService teamAccessService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final AIContextService contextService;
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .enable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
 
     public AIService(AIClient aiClient, ChatHistoryRepository chatHistoryRepository, UserRepository userRepository,
-            SyllabusRepository syllabusRepository, TeamAccessService teamAccessService) {
+            SyllabusRepository syllabusRepository, AIContextService contextService) {
         this.aiClient = aiClient;
         this.chatHistoryRepository = chatHistoryRepository;
         this.userRepository = userRepository;
         this.syllabusRepository = syllabusRepository;
-        this.teamAccessService = teamAccessService;
+        this.contextService = contextService;
     }
 
     @Transactional(readOnly = true)
     public List<com.cosre.cosre_backend.modules.ai.dto.ChatHistoryResponse> history(Long teamId, String username) {
         User user = requireUser(username);
-        if (teamId != null) teamAccessService.requireViewAccess(teamId, username);
+        if (teamId != null) contextService.requireTeamAccess(teamId, username);
         var entries = new ArrayList<>(chatHistoryRepository.findTop100ByUserIdAndTeamIdOrderByIdDesc(user.getId(), teamId));
         java.util.Collections.reverse(entries);
         return entries.stream().map(item -> new com.cosre.cosre_backend.modules.ai.dto.ChatHistoryResponse(
@@ -72,11 +82,12 @@ public class AIService {
 
     public ChatResponse chat(ChatRequest request, String username) {
         User user = requireUser(username);
-        if (request.teamId() != null) {
-            teamAccessService.requireViewAccess(request.teamId(), username);
+        String context = request.teamId() == null ? "" : contextService.teamContext(request.teamId(), username);
+        String answer = aiClient.generate(CHAT_SYSTEM_PROMPT,
+                context + "\nCâu hỏi người dùng:\n" + request.prompt());
+        if (answer == null || answer.isBlank() || answer.length() > 16000) {
+            throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI trả về câu trả lời rỗng hoặc quá dài");
         }
-
-        String answer = aiClient.generate(CHAT_SYSTEM_PROMPT, request.prompt());
 
         ChatHistory history = new ChatHistory();
         history.setPrompt(request.prompt());
@@ -90,18 +101,58 @@ public class AIService {
 
     @Transactional(readOnly = true)
     public GenerateMilestonesResponse generateMilestones(GenerateMilestonesRequest request, String username) {
-        requireUser(username);
+        User actor = requireUser(username);
 
         Syllabus syllabus = syllabusRepository.findDetailedById(request.syllabusId())
                 .orElseThrow(() -> new ResourceNotFoundException("Syllabus not found"));
+        contextService.requireSyllabusAccess(syllabus, actor);
         if (!syllabus.isActive()) {
             throw new BusinessRuleException("Syllabus is not active");
         }
 
         String userPrompt = buildMilestonePrompt(syllabus);
+        if (request.objectives() != null && !request.objectives().isEmpty()) {
+            userPrompt += "\nMục tiêu dự án do giảng viên cung cấp:\n" + String.join("\n", request.objectives());
+        }
         String raw = aiClient.generate(MILESTONE_SYSTEM_PROMPT, userPrompt);
 
         return parseAndValidate(raw);
+    }
+
+    @Transactional(readOnly = true)
+    public GenerateProjectDraftResponse generateProjectDraft(GenerateProjectDraftRequest request, String username) {
+        User actor = requireUser(username);
+        Syllabus syllabus = syllabusRepository.findDetailedById(request.syllabusId())
+                .orElseThrow(() -> new ResourceNotFoundException("Syllabus not found"));
+        contextService.requireSyllabusAccess(syllabus, actor);
+        if (!syllabus.isActive()) throw new BusinessRuleException("Syllabus is not active");
+        String topic = request.topic() == null ? "" : request.topic().trim();
+        String prompt = buildMilestonePrompt(syllabus) + "\nĐề tài giảng viên muốn tham khảo: " + topic;
+        String raw = aiClient.generate(PROJECT_DRAFT_SYSTEM_PROMPT, prompt);
+        var generatedMilestones = parseAndValidate(raw).milestones();
+        JsonNode root;
+        try {
+            root = objectMapper.readTree(stripMarkdownFences(raw));
+        } catch (Exception exception) {
+            throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI trả về thông tin dự án không đúng định dạng JSON");
+        }
+        JsonNode titleNode = root.path("title");
+        JsonNode descriptionNode = root.path("description");
+        JsonNode objectivesNode = root.path("objectives");
+        if (!titleNode.isTextual() || titleNode.asText().isBlank() || titleNode.asText().length() > 200
+                || !descriptionNode.isTextual() || descriptionNode.asText().isBlank()
+                || descriptionNode.asText().length() > 4000 || !objectivesNode.isArray()
+                || objectivesNode.size() < 2 || objectivesNode.size() > 10) {
+            throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI trả về thông tin dự án không hợp lệ");
+        }
+        List<String> objectives = new ArrayList<>();
+        for (JsonNode objective : objectivesNode) {
+            if (!objective.isTextual() || objective.asText().isBlank() || objective.asText().length() > 500)
+                throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI trả về mục tiêu không hợp lệ");
+            objectives.add(objective.asText().trim());
+        }
+        return new GenerateProjectDraftResponse(titleNode.asText().trim(), descriptionNode.asText().trim(),
+                objectives, generatedMilestones);
     }
 
     private String buildMilestonePrompt(Syllabus syllabus) {
@@ -109,15 +160,17 @@ public class AIService {
         builder.append("Môn học: ").append(syllabus.getSubject().getName()).append('\n');
         builder.append("Đề cương: ").append(syllabus.getTitle()).append('\n');
         if (syllabus.getObjectives() != null && !syllabus.getObjectives().isBlank()) {
-            builder.append("Mục tiêu:\n").append(syllabus.getObjectives()).append('\n');
+            builder.append("Mục tiêu:\n").append(AIContextService.bounded(syllabus.getObjectives(), 8000)).append('\n');
         }
         if (syllabus.getContent() != null && !syllabus.getContent().isBlank()) {
-            builder.append("Nội dung:\n").append(syllabus.getContent()).append('\n');
+            builder.append("Nội dung:\n").append(AIContextService.bounded(syllabus.getContent(), 16000)).append('\n');
         }
         return builder.toString();
     }
 
     private GenerateMilestonesResponse parseAndValidate(String raw) {
+        if (raw == null || raw.length() > 64000)
+            throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI trả về dữ liệu rỗng hoặc quá dài");
         JsonNode root;
         try {
             root = objectMapper.readTree(stripMarkdownFences(raw));
@@ -125,6 +178,9 @@ public class AIService {
             throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI trả về dữ liệu không đúng định dạng JSON");
         }
 
+        if (root == null || !root.isObject()) {
+            throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI trả về dữ liệu không đúng định dạng JSON");
+        }
         JsonNode milestonesNode = root.path("milestones");
         if (!milestonesNode.isArray()) {
             throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI trả về dữ liệu không đúng định dạng JSON");
@@ -132,10 +188,16 @@ public class AIService {
 
         List<GeneratedMilestone> milestones = new ArrayList<>();
         for (JsonNode node : milestonesNode) {
+            if (!node.path("title").isTextual() || !node.path("description").isTextual()
+                    || node.path("title").asText().length() > 200
+                    || node.path("description").asText().isBlank()
+                    || node.path("description").asText().length() > 1000) {
+                throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI trả về title hoặc description không hợp lệ");
+            }
             String title = node.path("title").asText(null);
             String description = node.path("description").asText(null);
-            if (!node.path("dueOffsetDays").isInt() && !node.path("dueOffsetDays").isLong()) {
-                throw new BusinessRuleException("AI trả về milestone thiếu dueOffsetDays hợp lệ");
+            if (!node.path("dueOffsetDays").isIntegralNumber() || !node.path("dueOffsetDays").canConvertToInt()) {
+                throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI trả về milestone thiếu dueOffsetDays hợp lệ");
             }
             Integer dueOffsetDays = node.path("dueOffsetDays").asInt();
             milestones.add(new GeneratedMilestone(title, description, dueOffsetDays));
@@ -147,7 +209,7 @@ public class AIService {
 
     private void validateMilestones(List<GeneratedMilestone> milestones) {
         if (milestones.size() < MIN_MILESTONES || milestones.size() > MAX_MILESTONES) {
-            throw new BusinessRuleException(
+            throw new ExternalServiceException(HttpStatus.BAD_GATEWAY,
                     "AI phải trả về từ " + MIN_MILESTONES + " đến " + MAX_MILESTONES + " milestones");
         }
 
@@ -155,19 +217,19 @@ public class AIService {
         int previousOffset = 0;
         for (GeneratedMilestone milestone : milestones) {
             if (milestone.title() == null || milestone.title().isBlank()) {
-                throw new BusinessRuleException("Milestone title không được để trống");
+                throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "Milestone title không được để trống");
             }
             if (milestone.dueOffsetDays() == null || milestone.dueOffsetDays() <= 0) {
-                throw new BusinessRuleException("dueOffsetDays phải là số nguyên dương");
+                throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "dueOffsetDays phải là số nguyên dương");
             }
             if (milestone.dueOffsetDays() <= previousOffset) {
-                throw new BusinessRuleException("dueOffsetDays của các milestone phải tăng dần");
+                throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "dueOffsetDays của các milestone phải tăng dần");
             }
             previousOffset = milestone.dueOffsetDays();
 
-            String normalizedTitle = milestone.title().trim().toLowerCase();
+            String normalizedTitle = milestone.title().trim().toLowerCase(java.util.Locale.ROOT);
             if (!seenTitles.add(normalizedTitle)) {
-                throw new BusinessRuleException("Các milestone không được trùng title");
+                throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "Các milestone không được trùng title");
             }
         }
     }

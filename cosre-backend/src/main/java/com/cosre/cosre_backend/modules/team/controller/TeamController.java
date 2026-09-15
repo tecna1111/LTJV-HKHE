@@ -3,6 +3,7 @@ package com.cosre.cosre_backend.modules.team.controller;
 import com.cosre.cosre_backend.common.dto.ApiResponse;
 import com.cosre.cosre_backend.modules.team.dto.*;
 import com.cosre.cosre_backend.modules.team.service.TeamService;
+import com.cosre.cosre_backend.modules.notification.service.NotificationService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,7 +15,10 @@ import java.util.List;
 @RequestMapping("/api/v1/teams")
 public class TeamController {
     private final TeamService service;
-    public TeamController(TeamService service) { this.service = service; }
+    private final NotificationService notifications;
+    public TeamController(TeamService service, NotificationService notifications) {
+        this.service = service; this.notifications = notifications;
+    }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('LECTURER','STUDENT')")
@@ -57,6 +61,13 @@ public class TeamController {
     @GetMapping("/{id}/workspace") @PreAuthorize("hasAnyRole('LECTURER','STUDENT')")
     public ApiResponse<TeamWorkspaceResponse> workspace(@PathVariable Long id, Authentication auth) { return ok("Workspace loaded", service.workspace(id, auth.getName())); }
     @PutMapping("/{id}/milestones/{milestoneId}") @PreAuthorize("hasRole('STUDENT')")
-    public ApiResponse<TeamWorkspaceResponse> milestone(@PathVariable Long id, @PathVariable Long milestoneId, @RequestParam boolean done, Authentication auth) { return ok("Milestone updated", service.setMilestoneDone(id, milestoneId, done, auth.getName())); }
+    public ApiResponse<TeamWorkspaceResponse> milestone(@PathVariable Long id, @PathVariable Long milestoneId, @RequestParam boolean done, Authentication auth) {
+        var result = service.setMilestoneDone(id, milestoneId, done, auth.getName());
+        if (done) notifications.notifyTeamEvent(id, auth.getName(),
+                "MILESTONE_DONE:" + id + ":" + milestoneId + ":" + java.util.UUID.randomUUID(),
+                "MILESTONE_DONE", "Cột mốc đã hoàn thành", "Trưởng nhóm đã đánh dấu hoàn thành một cột mốc.",
+                "/teams/" + id + "/workspace");
+        return ok("Milestone updated", result);
+    }
     private <T> ApiResponse<T> ok(String message, T data) { return new ApiResponse<>(true, message, data); }
 }

@@ -1,39 +1,12 @@
-/**
- * projectApi.js
- * -------------------------------------------------------------------------
- * API service cho màn hình "Tạo Project + Milestone (AI hỗ trợ)" của Giảng viên.
- *
- * GIẢ ĐỊNH VỀ HỢP ĐỒNG API (cần đối chiếu lại với Công Duy - Backend Lead,
- * package com.cosre.cosre_backend):
- *   GET    /api/lecturer/subjects
- *          -> [{ id, code, name }]                (môn học được phân công)
- *
- *   GET    /api/subjects/:subjectId/syllabus
- *          -> { id, subjectId, content, objectives: string[] }
- *
- *   POST   /api/ai/milestones/generate
- *          body: { syllabusId, objectives: string[] }
- *          -> { milestones: [{ title, description, dueOffsetDays }] }
- *
- *   POST   /api/lecturer/projects
- *          body: { title, description, subjectId, objectives: string[],
- *                   milestones: [{ title, description, dueOffsetDays }] }
- *          -> { id, status: "DRAFT" | "PENDING", ... }
- *
- *   POST   /api/lecturer/projects/:projectId/submit
- *          -> { id, status: "PENDING" }
- *
- * Nếu Spring Boot đặt tên field/endpoint khác (ví dụ do @RequestMapping
- * hoặc DTO khác), chỉ cần sửa trong file này — các component không cần
- * biết chi tiết endpoint thật.
- * -------------------------------------------------------------------------
- */
+/** API dùng chung base URL /api/v1; mọi response được bọc trong ApiResponse.data. */
 
 import apiClient from "../../../config/axios";
 
 export async function fetchAssignedSubjects() {
-  const { data } = await apiClient.get("/subjects");
-  return (data.data || []).filter((subject) => subject.active);
+  const { data } = await apiClient.get("/classrooms");
+  const subjects = (data.data || []).filter((classroom) => classroom.active)
+    .map((classroom) => classroom.subject).filter((subject) => subject?.active);
+  return [...new Map(subjects.map((subject) => [subject.id, subject])).values()];
 }
 
 export async function fetchSyllabus(subjectId) {
@@ -48,7 +21,17 @@ export async function generateMilestonesWithAI({ syllabusId, objectives }) {
     syllabusId,
     objectives,
   });
-  return data.data.milestones;
+  const milestones = data.data?.milestones;
+  if (!Array.isArray(milestones)) throw new Error('AI response is missing milestones');
+  return milestones;
+}
+
+export async function generateProjectDraftWithAI({ syllabusId, topic }) {
+  const { data } = await apiClient.post('/ai/projects/draft', { syllabusId, topic });
+  const draft = data.data;
+  if (!draft?.title || !draft?.description || !Array.isArray(draft.objectives)
+      || !Array.isArray(draft.milestones)) throw new Error('AI response is missing project information');
+  return draft;
 }
 
 export async function createProject(payload) {
