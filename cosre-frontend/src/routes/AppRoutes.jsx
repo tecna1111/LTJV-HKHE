@@ -1,3 +1,4 @@
+import StudentTasksPage from '../modules/team/pages/StudentTasksPage';
 import CriteriaManagementPage from '../modules/evaluation/pages/CriteriaManagementPage';
 import FinalEvaluationPage from '../modules/evaluation/pages/FinalEvaluationPage';
 import AnswerFeedbackPage from '../modules/evaluation/pages/AnswerFeedbackPage';
@@ -31,6 +32,7 @@ function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/student/tasks" element={<ProtectedRoute requiredRole="STUDENT"><StudentTasksPage /></ProtectedRoute>} />
         <Route path="/evaluations/criteria" element={<ProtectedRoute requiredRole="LECTURER"><CriteriaManagementPage /></ProtectedRoute>} />
         <Route path="/evaluations/final" element={<ProtectedRoute><FinalEvaluationPage /></ProtectedRoute>} />
         <Route path="/evaluations/feedback" element={<ProtectedRoute><AnswerFeedbackPage /></ProtectedRoute>} />
