@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, Plus, RefreshCw } from 'lucide-react';
 import { DashboardShell } from '../../dashboard/pages/DashboardPage';
 import useAuthStore from '../../../store/useAuthStore';
 import { getApiError } from '../../../config/axios';
@@ -63,18 +64,18 @@ export default function KanbanPage() {
 
   return <DashboardShell role={role} displayName={displayName} pageTitle="Kanban nhóm">
     <div className="kanban-page">
-      <header className="kanban-heading"><div><Link to={`/teams/${id}/workspace`}>← Workspace nhóm</Link><h1>{board?.teamName || 'Kanban'}</h1><p>Mỗi thẻ là một task. Subtask là checklist của task.</p></div>
-        <button disabled={busy || !board} onClick={() => setForm({ ...emptyTask })}>+ Công việc</button></header>
+      <header className="kanban-heading"><div><Link to={`/teams/${id}/workspace`}><ArrowLeft size={16} /> Workspace nhóm</Link><h1>{board?.teamName || 'Kanban'}</h1><p>Quản lý công việc, theo dõi tiến độ và phối hợp cùng nhóm.</p></div>
+        <button disabled={busy || !board} onClick={() => setForm({ ...emptyTask })}><Plus size={16} /> Công việc</button></header>
       {error && <div role="alert" className="kanban-error">{error}</div>}
       {!board ? <p>Đang tải board…</p> : <>
         <div className="kanban-filters">
           <label>Người phụ trách<select value={assignee} onChange={e => setAssignee(e.target.value)}><option value="">Tất cả</option>{board.members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></label>
           <label>Sprint<select value={sprintFilter} onChange={e => setSprintFilter(e.target.value)}><option value="">Tất cả</option><option value="backlog">Chưa vào sprint</option>{board.sprints.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}</select></label>
-          <button disabled={busy} onClick={refresh}>Tải lại</button>
-          {board.canManage && <button disabled={busy} onClick={() => setSprintForm({ title: '', startsOn: '', endsOn: '' })}>+ Sprint</button>}
+          <button disabled={busy} onClick={refresh}><RefreshCw size={16} /> Tải lại</button>
+          {board.canManage && <button disabled={busy} onClick={() => setSprintForm({ title: '', startsOn: '', endsOn: '' })}><Plus size={16} /> Sprint</button>}
         </div>
         <section className="kanban-columns" aria-label="Bảng công việc" aria-busy={busy}>
-          {columns.map(([status, label]) => <section key={status} className="kanban-column" onDragOver={e => e.preventDefault()} onDrop={e => drop(e, status)}>
+          {columns.map(([status, label]) => <section key={status} className={`kanban-column kanban-column--${status.toLowerCase()}`} onDragOver={e => e.preventDefault()} onDrop={e => drop(e, status)}>
             <h2>{label} <small>{board.tasks.filter(t => t.status === status && filtered(t)).length}</small></h2>
             {board.tasks.filter(t => t.status === status && filtered(t)).map(task => <article key={task.id} className="kanban-card" draggable={!busy}
               onDragStart={e => e.dataTransfer.setData('text/plain', String(task.id))} onDragOver={e => e.preventDefault()} onDrop={e => drop(e, status, task.id)}>
@@ -94,7 +95,7 @@ export default function KanbanPage() {
               <div className="kanban-actions"><button disabled={busy} onClick={() => setForm({ ...task, dueOn: task.dueOn || '', sprintId: task.sprintId || '', milestoneId: task.milestoneId || '', checkpointId: task.checkpointId || '' })}>Sửa</button>
                 <button disabled={busy} onClick={() => { if (window.confirm(`Xóa task “${task.title}” và các subtask?`)) mutate(`/tasks/${task.id}`, 'delete'); }}>Xóa</button></div>
             </article>)}
-            <p className="kanban-drop-hint">Kéo thẻ vào đây để lưu trạng thái / thứ tự</p>
+            <p className="kanban-drop-hint">Kéo công việc vào đây để cập nhật tiến độ</p>
           </section>)}
         </section>
         <section className="kanban-panel"><h2>Sprint</h2>{board.sprints.length === 0 && <p>Chưa có sprint.</p>}{board.sprints.map(s => <div className="kanban-sprint" key={s.id}><span><b>{s.title}</b> · {s.startsOn} → {s.endsOn}</span>{board.canManage && <div><button disabled={busy} onClick={() => setSprintForm(s)}>Sửa</button><button disabled={busy} onClick={() => { if (window.confirm('Xóa sprint? Các task sẽ được chuyển về chưa vào sprint.')) mutate(`/sprints/${s.id}`, 'delete'); }}>Xóa</button></div>}</div>)}</section>
