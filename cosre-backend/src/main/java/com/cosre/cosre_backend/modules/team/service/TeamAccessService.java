@@ -1,61 +1,38 @@
 package com.cosre.cosre_backend.modules.team.service;
 
-import com.cosre.cosre_backend.common.exception.BusinessRuleException;
-import com.cosre.cosre_backend.common.exception.ResourceNotFoundException;
-import com.cosre.cosre_backend.modules.account.entity.User;
-import com.cosre.cosre_backend.modules.account.repository.UserRepository;
+import org.springframework.security.access.AccessDeniedException;
 import com.cosre.cosre_backend.modules.team.entity.Team;
-import com.cosre.cosre_backend.modules.team.repository.TeamRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TeamAccessService {
 
-    private final TeamRepository teamRepository;
-    private final UserRepository userRepository;
+    private final TeamService teamService;
 
-    public TeamAccessService(TeamRepository teamRepository, UserRepository userRepository) {
-        this.teamRepository = teamRepository;
-        this.userRepository = userRepository;
+    public TeamAccessService(TeamService teamService) {
+        this.teamService = teamService;
     }
     @Transactional(readOnly = true)
     public Team requireViewAccess(Long teamId, String username) {
-        Team team = requireTeam(teamId);
-        boolean isLecturer = team.getLecturer().getUsername().equals(username);
-        boolean isMember = team.getMembers().stream()
-                .anyMatch(member -> member.getUsername().equals(username));
-        if (!isLecturer && !isMember) {
-            throw new BusinessRuleException("You do not have access to this team");
-        }
-        return team;
+        return teamService.get(teamId, username);
     }
 
     @Transactional(readOnly = true)
     public Team requireLecturerAccess(Long teamId, String username) {
-        Team team = requireTeam(teamId);
+        Team team = requireViewAccess(teamId, username);
         if (!team.getLecturer().getUsername().equals(username)) {
-            throw new BusinessRuleException("Only the managing lecturer can perform this action");
+            throw new AccessDeniedException("Only the managing lecturer can perform this action");
         }
         return team;
     }
 
     @Transactional(readOnly = true)
     public Team requireLeaderAccess(Long teamId, String username) {
-        Team team = requireTeam(teamId);
-        User user = requireUser(username);
-        boolean isLeader = team.getLeader() != null && team.getLeader().getId().equals(user.getId());
+        Team team = requireViewAccess(teamId, username);
+        boolean isLeader = team.getLeader() != null && team.getLeader().getUsername().equals(username);
         if (!isLeader) {
-            throw new BusinessRuleException("Only the team leader can perform this action");
+            throw new AccessDeniedException("Only the team leader can perform this action");
         }
         return team;
-    }
-    private Team requireTeam(Long id) {
-        return teamRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
-    }
-
-    private User requireUser(String username) {
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 }

@@ -21,7 +21,7 @@ import java.util.List;
     name = "peer_evaluation",
     uniqueConstraints = @UniqueConstraint(
         name = "uk_peer_evaluation_unique",
-        columnNames = {"evaluator_id", "evaluatee_id", "project_id", "milestone_id"}
+        columnNames = {"evaluator_id", "evaluatee_id", "project_id", "team_id", "milestone_id"}
     )
 )
 @Getter
@@ -95,7 +95,10 @@ public class PeerEvaluation {
     }
 
     public void clearDetails() {
-        details.forEach(d -> d.setPeerEvaluation(null));
+        // Không set d.setPeerEvaluation(null) thủ công: cột peer_evaluation_id
+        // bên PeerEvaluationDetail là NOT NULL, nên Hibernate sẽ cố UPDATE FK
+        // về null trước khi kịp xóa orphan -> PropertyValueException.
+        // orphanRemoval = true đã tự đủ để xóa các detail bị gỡ khỏi list.
         details.clear();
     }
 }

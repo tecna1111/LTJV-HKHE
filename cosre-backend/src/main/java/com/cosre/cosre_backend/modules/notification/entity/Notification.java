@@ -18,6 +18,8 @@ public class Notification {
     private String message;
     @Column(length = 255)
     private String link;
+    @Column(name = "event_key", length = 180)
+    private String eventKey;
     @Column(name = "is_read", nullable = false)
     private boolean read;
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -31,10 +33,12 @@ public class Notification {
     public void setType(String type) { this.type = type; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
+    public String getLink() { return link; }
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
-    public String getLink() { return link; }
     public void setLink(String link) { this.link = link; }
+    public String getEventKey() { return eventKey; }
+    public void setEventKey(String eventKey) { this.eventKey = eventKey; }
     public boolean isRead() { return read; }
     public void setRead(boolean read) { this.read = read; }
     public LocalDateTime getCreatedAt() { return createdAt; }

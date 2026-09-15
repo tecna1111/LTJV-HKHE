@@ -11,6 +11,9 @@ import com.cosre.cosre_backend.modules.notification.dto.NotificationSummaryRespo
 import com.cosre.cosre_backend.modules.notification.entity.Notification;
 import com.cosre.cosre_backend.modules.notification.repository.NotificationRepository;
 import com.cosre.cosre_backend.modules.team.repository.TeamRepository;
+import com.cosre.cosre_backend.modules.team.entity.Team;
+import com.cosre.cosre_backend.modules.meeting.entity.Meeting;
+import com.cosre.cosre_backend.modules.meeting.entity.MeetingStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,15 +29,17 @@ public class NotificationService {
     private final TeamRepository teamRepository;
     private final ClassroomRepository classroomRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final EmailDeliveryService emailDeliveryService;
 
     public NotificationService(NotificationRepository repository, UserRepository userRepository,
             TeamRepository teamRepository, ClassroomRepository classroomRepository,
-            SimpMessagingTemplate messagingTemplate) {
+            SimpMessagingTemplate messagingTemplate, EmailDeliveryService emailDeliveryService) {
         this.repository = repository;
         this.userRepository = userRepository;
         this.teamRepository = teamRepository;
         this.classroomRepository = classroomRepository;
         this.messagingTemplate = messagingTemplate;
+        this.emailDeliveryService = emailDeliveryService;
     }
 
     @Transactional(readOnly = true)
@@ -75,10 +80,10 @@ public class NotificationService {
             value.setMessage(sender.getFullName() + ": " + preview);
             value.setLink(link);
             NotificationResponse response = NotificationResponse.from(repository.save(value));
+            emailDeliveryService.enqueue(recipient, value, "CHAT:" + roomType + ":" + roomId + ":" + sender.getId() + ":" + Integer.toHexString(content.hashCode()));
             messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/notifications", response);
         }
     }
-
     public void notifyProjectSubmitted(Long projectId, String projectTitle, User lecturer) {
         String lecturerName = lecturer.getFullName() == null || lecturer.getFullName().isBlank()
                 ? lecturer.getUsername() : lecturer.getFullName();
@@ -90,6 +95,44 @@ public class NotificationService {
             value.setMessage(lecturerName + " đã gửi dự án “" + projectTitle + "” để phê duyệt.");
             value.setLink("/workflow?status=PENDING&projectId=" + projectId);
             NotificationResponse response = NotificationResponse.from(repository.save(value));
+            emailDeliveryService.enqueue(recipient, value, "PROJECT_SUBMITTED:" + projectId);
+            messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/notifications", response);
+        }
+    }
+
+    public void notifyMeeting(Team team, Meeting meeting, String eventType) {
+        String title;
+        String message;
+        if ("MEETING_CANCELLED".equals(eventType)) { title = "Lịch họp đã hủy"; message = "Cuộc họp “" + meeting.getTitle() + "” đã bị hủy."; }
+        else if ("MEETING_STARTED".equals(eventType)) { title = "Cuộc họp đang diễn ra"; message = "Cuộc họp “" + meeting.getTitle() + "” vừa bắt đầu. Tham gia ngay."; }
+        else if ("MEETING_REMINDER".equals(eventType)) { title = "Nhắc lịch họp"; message = "Cuộc họp “" + meeting.getTitle() + "” sắp bắt đầu."; }
+        else if ("MEETING_UPDATED".equals(eventType)) { title = "Lịch họp đã thay đổi"; message = "Cuộc họp “" + meeting.getTitle() + "” vừa được cập nhật."; }
+        else { title = "Lịch họp mới"; message = "Bạn được mời tham gia cuộc họp “" + meeting.getTitle() + "”."; }
+        Set<User> recipients = new LinkedHashSet<>(team.getMembers()); recipients.add(team.getLecturer());
+        for (User recipient : recipients) {
+            if (!recipient.isActive()) continue;
+            // The scheduled time is part of the idempotency key: moving a meeting must allow a
+            // fresh reminder while retries for the same schedule remain harmless.
+            String key = eventType + ":" + meeting.getId() + ":" + meeting.getStartsAt();
+            if (repository.existsByUserIdAndEventKey(recipient.getId(), key)) continue;
+            Notification value = new Notification(); value.setUserId(recipient.getId()); value.setType(eventType);
+            value.setTitle(title); value.setMessage(message); value.setLink("/meetings?teamId=" + meeting.getTeamId()); value.setEventKey(key);
+            NotificationResponse response = NotificationResponse.from(repository.save(value));
+            emailDeliveryService.enqueue(recipient, value, key);
+            messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/notifications", response);
+        }
+    }
+
+    /** Shared event boundary for resource, milestone, checkpoint, evaluation, team-leader and incident owners.
+     * Callers supply one immutable business event id; this service owns recipient delivery and deduplication. */
+    public void notifyEvent(Set<User> recipients, String eventId, String type, String title, String message, String link) {
+        if (eventId == null || eventId.isBlank()) throw new IllegalArgumentException("A stable notification event id is required");
+        for (User recipient : recipients) {
+            if (!recipient.isActive() || repository.existsByUserIdAndEventKey(recipient.getId(), eventId)) continue;
+            Notification value = new Notification(); value.setUserId(recipient.getId()); value.setEventKey(eventId);
+            value.setType(type); value.setTitle(title); value.setMessage(message); value.setLink(link);
+            NotificationResponse response = NotificationResponse.from(repository.save(value));
+            emailDeliveryService.enqueue(recipient, value, eventId);
             messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/notifications", response);
         }
     }

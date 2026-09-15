@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   CheckCircle2, ClipboardList, Inbox, Info, Lock, LogOut, RefreshCw,
   Send, Star, Users, X,
@@ -8,7 +8,7 @@ import BrandLogo from '../../../components/BrandLogo';
 import { getApiError } from '../../../config/axios';
 import useAuthStore from '../../../store/useAuthStore';
 import { getTeams } from '../../team/teamService';
-import { getCriteria, getGivenEvaluations, getReceivedEvaluations, submitPeerEvaluation } from '../evaluationService';
+import { getCriteria, getGivenEvaluations, getReceivedEvaluations, submitPeerEvaluation, getRound } from '../evaluationService';
 import './PeerEvaluationPage.css';
 
 const STATUS_META = {
@@ -136,6 +136,10 @@ function PeerEvaluationPage() {
   const navigate = useNavigate();
   const { fullName, username, clearAuth } = useAuthStore();
 
+  const [params, setParams] = useSearchParams();
+  const selectedId = params.get('teamId');
+  const [allTeams, setAllTeams] = useState([]);
+  const [round, setRound] = useState(null);
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState(null);
   const [criteria, setCriteria] = useState([]);
@@ -145,24 +149,28 @@ function PeerEvaluationPage() {
   const [activeTeammate, setActiveTeammate] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  const loadAll = async () => {
+  const loadAll = useCallback(async () => {
     setLoading(true);
     setFeedback({ type: '', text: '' });
     try {
       const teamsResult = await getTeams();
       const teams = teamsResult.data || [];
-      const myTeam = teams.find((t) => t.projectId) || teams[0] || null;
+      setAllTeams(teams.filter(t => t.projectId));
+      const myTeam = selectedId ? teams.find(t => String(t.id) === selectedId) : teams.find((t) => t.projectId) || null;
+      setRound(null);
       setTeam(myTeam);
 
       if (myTeam?.projectId) {
-        const [criteriaResult, givenResult, receivedResult] = await Promise.all([
+        const [criteriaResult, givenResult, receivedResult, roundResult] = await Promise.all([
           getCriteria(myTeam.projectId),
           getGivenEvaluations(myTeam.projectId),
           getReceivedEvaluations(myTeam.projectId),
+          getRound(myTeam.id, myTeam.projectId),
         ]);
+        setRound(roundResult);
         setCriteria(criteriaResult.data || []);
-        setGiven(givenResult.data || []);
-        setReceived(receivedResult.data || []);
+        setGiven((givenResult.data || []).filter(r => r.teamId === myTeam.id && r.milestoneId == null));
+        setReceived((receivedResult.data || []).filter(r => r.teamId === myTeam.id && r.milestoneId == null));
       } else {
         setCriteria([]); setGiven([]); setReceived([]);
       }
@@ -171,9 +179,10 @@ function PeerEvaluationPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedId]);
 
-  useEffect(() => { loadAll(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { loadAll(); }, [loadAll]);
 
   const teammates = useMemo(
     () => (team?.members || []).filter((m) => m.username !== username),
@@ -192,7 +201,10 @@ function PeerEvaluationPage() {
     return (total / received.length).toFixed(2);
   }, [received]);
 
-  const openEvaluation = (teammate) => setActiveTeammate(teammate);
+  const openEvaluation = (teammate) => {
+    if (!round?.finalOpen || round.locked) { setFeedback({ type: 'error', text: 'Đợt chưa mở hoặc đã khóa.' }); return; }
+    setActiveTeammate(teammate);
+  };
 
   const handleSubmit = async (payload) => {
     if (!team) return;
@@ -224,7 +236,7 @@ function PeerEvaluationPage() {
         <BrandLogo />
         <nav>
           <button onClick={() => navigate('/dashboard')}><ClipboardList size={19} /> Tổng quan</button>
-          <button className="active"><Star size={19} /> Đánh giá chéo</button>
+          <button className="active"><Star size={19} /> Đánh giá chéo</button><button onClick={() => navigate('/evaluations/final')}>Kết quả cuối dự án</button>
         </nav>
         <button className="pe-logout" onClick={() => { clearAuth(); navigate('/login'); }}><LogOut size={18} /> Đăng xuất</button>
       </aside>
@@ -236,6 +248,8 @@ function PeerEvaluationPage() {
         </header>
 
         <div className="pe-content">
+          <label>Nhóm đánh giá <select value={team?.id || ''} disabled={loading || saving} onChange={e => { setActiveTeammate(null);setParams({ teamId: e.target.value }); }}><option value="">Chọn nhóm</option>{allTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+          {round && <p>{round.locked ? 'Đợt đã khóa' : round.finalOpen ? 'Đợt đánh giá đang mở' : 'Chờ giảng viên mở đợt đánh giá'}</p>}
           <div className="pe-heading">
             <div>
               <span>ĐÁNH GIÁ CHÉO</span>
@@ -284,7 +298,7 @@ function PeerEvaluationPage() {
                       {existing && <p className="pe-teammate-score">Điểm đã chấm: <strong>{existing.totalScore}</strong>/10</p>}
                       <button
                         className={existing ? 'pe-secondary' : 'pe-primary'}
-                        disabled={existing?.status === 'LOCKED' || criteria.length === 0}
+                        disabled={!round?.finalOpen || round.locked || existing?.status === 'LOCKED' || criteria.length === 0}
                         onClick={() => openEvaluation(m)}
                       >
                         {existing?.status === 'LOCKED' ? <><Lock size={15} /> Đã khóa</> : existing ? 'Sửa đánh giá' : 'Đánh giá'}

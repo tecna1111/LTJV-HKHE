@@ -48,7 +48,8 @@ public class SecurityConfig {
                         .contentTypeOptions(contentTypeOptions -> { })
                         .referrerPolicy(referrer -> referrer.policy(
                                 org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
-                        .permissionsPolicyHeader(permissions -> permissions.policy("camera=(), microphone=(), geolocation=()")));
+                        // Meeting rooms are embedded in the authenticated app; iframe allow attributes scope media access.
+                        .permissionsPolicyHeader(permissions -> permissions.policy("geolocation=()")));
 
         http.addFilterBefore(new JwtAuthenticationFilter(jwtConfig, accountService),
                 UsernamePasswordAuthenticationFilter.class);

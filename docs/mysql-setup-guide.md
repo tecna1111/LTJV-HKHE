@@ -66,6 +66,26 @@ Windows/macOS: cài MySQL Community Server bản cài đặt sẵn (installer/Ho
 Không cần chạy tay từng migration — **Flyway tự động áp dụng khi Spring Boot khởi
 động** (`spring.flyway.enabled=true` đã có sẵn trong `application.properties`).
 
+### Cách khuyên dùng: script `run-mysql.sh` (không bao giờ quên set biến môi trường)
+
+`export` tay dễ quên mỗi khi mở terminal mới → app tự rơi về profile `dev` (H2,
+mất dữ liệu khi tắt app) mà không hề báo lỗi gì. Dùng script có sẵn để tránh hẳn
+lỗi này:
+
+```bash
+cd cosre-backend
+cp .env.example .env          # chỉ làm 1 lần
+# mở .env, sửa DB_USERNAME/DB_PASSWORD cho đúng với MySQL trên máy bạn
+./run-mysql.sh
+```
+
+Từ nay, **luôn dùng `./run-mysql.sh` để khởi động backend**, không gõ tay
+`./mvnw spring-boot:run` nữa — script tự đọc `.env` và tự set đúng
+`SPRING_PROFILES_ACTIVE=mysql` mỗi lần, đảm bảo không bao giờ vô tình chạy nhầm
+H2 rồi tưởng nhầm là "mất dữ liệu".
+
+### Cách thủ công (nếu không dùng script)
+
 ```bash
 cd cosre-backend
 export SPRING_PROFILES_ACTIVE=mysql
@@ -130,6 +150,7 @@ lại để tránh vô tình seed lặp mỗi lần ai đó khởi động lại
 |---|---|---|
 | `Public Key Retrieval is not allowed` | MySQL 8 dùng `caching_sha2_password` | Thêm `&allowPublicKeyRetrieval=true` vào `DB_URL` (đã có sẵn trong ví dụ trên) |
 | `Unknown database 'cosre'` | Chưa tạo database | Chạy lại bước tạo DB ở mục 2/3 |
+| **Restart app xong tự nhiên mất hết tài khoản/dữ liệu vừa thêm, admin bị active lại** | Quên `export SPRING_PROFILES_ACTIVE=mysql` ở phiên terminal mới → app rơi về profile `dev` (H2 in-memory), KHÔNG BÁO LỖI GÌ. `DataInitializer` seed lại tài khoản demo mặc định trên schema H2 trống → nhìn như "mất dữ liệu" | Luôn dùng `./run-mysql.sh` thay vì gõ tay `./mvnw spring-boot:run`, sẽ không bao giờ quên set biến nữa |
 | `Access denied for user` | Sai user/password hoặc user chưa có quyền | Kiểm tra lại `GRANT ALL PRIVILEGES` đã chạy đúng chưa |
 | Flyway báo `Validate failed: Migration checksum mismatch` | Có ai đó **sửa lại nội dung** 1 file migration đã từng chạy | Không được sửa migration cũ — luôn tạo file `V<n+1>__...sql` mới (xem mục 8) |
 | App start OK nhưng thiếu bảng | Quên `spring.flyway.enabled=true` hoặc dùng nhầm `ddl-auto=update` | Dự án dùng `ddl-auto=validate` — schema luôn phải đến từ Flyway, không phải Hibernate tự sinh |

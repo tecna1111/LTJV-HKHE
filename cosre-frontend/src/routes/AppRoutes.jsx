@@ -1,3 +1,6 @@
+import CriteriaManagementPage from '../modules/evaluation/pages/CriteriaManagementPage';
+import FinalEvaluationPage from '../modules/evaluation/pages/FinalEvaluationPage';
+import AnswerFeedbackPage from '../modules/evaluation/pages/AnswerFeedbackPage';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import LoginPage from '../modules/authentication/pages/LoginPage';
 import UserManagementPage from '../modules/account/pages/UserManagementPage';
@@ -16,24 +19,32 @@ import ClassroomDetailPage from '../modules/classroom/pages/ClassroomDetailPage'
 import ClassroomImportPage from '../modules/classroom/pages/ClassroomImportPage';
 import ProjectWorkflowPage from '../modules/workflow/pages/ProjectWorkflowPage';
 import TeamWorkspacePage from '../modules/team/pages/TeamWorkspacePage';
+import KanbanPage from '../modules/team/pages/KanbanPage';
 import WhiteboardPage from '../modules/collaboration/pages/WhiteboardPage';
 import StudentTeamsPage from '../modules/team/pages/StudentTeamsPage';
 import ChatPage from '../modules/chat/pages/ChatPage';
 import ResourceLibraryPage from '../modules/resource/pages/ResourceLibraryPage';
+import MeetingPage from '../modules/meeting/pages/MeetingPage';
 
 function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/evaluations/criteria" element={<ProtectedRoute requiredRole="LECTURER"><CriteriaManagementPage /></ProtectedRoute>} />
+        <Route path="/evaluations/final" element={<ProtectedRoute><FinalEvaluationPage /></ProtectedRoute>} />
+        <Route path="/evaluations/feedback" element={<ProtectedRoute><AnswerFeedbackPage /></ProtectedRoute>} />
+        <Route path="/incidents" element={<ProtectedRoute requiredRole="ADMIN"><SystemReportsPage /></ProtectedRoute>} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/workflow" element={<ProtectedRoute><ProjectWorkflowPage /></ProtectedRoute>} />
         <Route path="/classrooms" element={<ProtectedRoute><MyClassroomsPage /></ProtectedRoute>} />
         <Route path="/teams/:id/workspace" element={<ProtectedRoute><TeamWorkspacePage /></ProtectedRoute>} />
+        <Route path="/teams/:id/kanban" element={<ProtectedRoute><KanbanPage /></ProtectedRoute>} />
         <Route path="/teams/:id/whiteboard" element={<ProtectedRoute><WhiteboardPage /></ProtectedRoute>} />
         <Route path="/student/teams" element={<ProtectedRoute requiredRole="STUDENT"><StudentTeamsPage /></ProtectedRoute>} />
         <Route path="/messages" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+        <Route path="/meetings" element={<ProtectedRoute><MeetingPage /></ProtectedRoute>} />
         <Route path="/resources" element={<ProtectedRoute><ResourceLibraryPage /></ProtectedRoute>} />
         <Route
           path="/lecturer/projects/new"

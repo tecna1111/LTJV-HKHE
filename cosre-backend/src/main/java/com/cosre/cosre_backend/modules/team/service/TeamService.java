@@ -22,21 +22,26 @@ import java.util.*;
 @Service
 @Transactional
 public class TeamService {
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
     private final TeamRepository teamRepository;
     private final UserRepository userRepository;
     private final ClassroomRepository classroomRepository;
     private final ProjectRepository projectRepository;
     private final ClassroomProjectRepository classroomProjectRepository;
     private final TeamMilestoneProgressRepository progressRepository;
+    private final com.cosre.cosre_backend.modules.kanban.service.KanbanService kanbanService;
 
     public TeamService(TeamRepository teamRepository, UserRepository userRepository, ClassroomRepository classroomRepository,
-            ProjectRepository projectRepository, ClassroomProjectRepository classroomProjectRepository, TeamMilestoneProgressRepository progressRepository) {
+            ProjectRepository projectRepository, ClassroomProjectRepository classroomProjectRepository, TeamMilestoneProgressRepository progressRepository,
+            com.cosre.cosre_backend.modules.kanban.service.KanbanService kanbanService) {
         this.teamRepository = teamRepository;
         this.userRepository = userRepository;
         this.classroomRepository = classroomRepository;
         this.projectRepository = projectRepository;
         this.classroomProjectRepository = classroomProjectRepository;
         this.progressRepository = progressRepository;
+        this.kanbanService = kanbanService;
     }
 
     public Team create(CreateTeamRequest request, String username) {
@@ -60,17 +65,32 @@ public class TeamService {
 
     @Transactional(readOnly = true)
     public List<Team> listMine(String username) {
-        return teamRepository.findDistinctByLecturerUsernameOrMembersUsernameOrderByUpdatedAtDesc(username, username);
+        requireUser(username);
+        return teamRepository.findDistinctByLecturerUsernameOrMembersUsernameOrderByUpdatedAtDesc(username, username).stream()
+            .filter(team -> {
+                try { requireAccessible(team.getId(), username); return true; }
+                catch (org.springframework.security.access.AccessDeniedException denied) { return false; }
+            }).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<Team> listByClassroom(Long classroomId) { return teamRepository.findByClassroomIdOrderByUpdatedAtDesc(classroomId); }
+    public List<Team> listByClassroom(Long classroomId, String username) {
+        User actor = requireUser(username);
+        if (actor.getRole() == RoleEnum.LECTURER) requireManagedClassroom(classroomId, actor);
+        else if (actor.getRole() != RoleEnum.STAFF && actor.getRole() != RoleEnum.HEAD_DEPT)
+            throw new org.springframework.security.access.AccessDeniedException("You cannot list teams in this class");
+        return teamRepository.findByClassroomIdOrderByUpdatedAtDesc(classroomId);
+    }
 
     @Transactional(readOnly = true)
     public Team get(Long id, String username) { return requireAccessible(id, username); }
 
     public Team update(Long id, UpdateTeamRequest request, String username) {
-        Team team = requireOwned(id, username);
+        Team team = requireAccessible(id, username);
+        User actor = requireUser(username);
+        if (!team.getLecturer().getId().equals(actor.getId())
+                && (team.getLeader() == null || !team.getLeader().getId().equals(actor.getId())))
+            throw new org.springframework.security.access.AccessDeniedException("Only lecturer or leader can edit team information");
         String name = request.name().trim();
         if (!team.getName().equalsIgnoreCase(name) && teamRepository.existsByClassroomIdAndNameIgnoreCase(team.getClassroomId(), name))
             throw new DuplicateResourceException("Team name already exists in this classroom");
@@ -90,6 +110,9 @@ public class TeamService {
 
     public Team removeMember(Long id, Long studentId, String username) {
         Team team = requireOwned(id, username);
+        long assigned = entityManager.createQuery("select count(t) from KanbanTask t, KanbanBoard b where t.boardId=b.id and b.teamId=:team and :student member of t.assigneeIds", Long.class)
+                .setParameter("team", id).setParameter("student", studentId).getSingleResult();
+        if (assigned > 0) throw new BusinessRuleException("Reassign this member's Kanban tasks before removing them");
         User student = findMember(team, studentId);
         if (team.getLeader() != null && team.getLeader().getId().equals(studentId)) team.setLeader(null);
         team.getMembers().remove(student);
@@ -98,12 +121,21 @@ public class TeamService {
 
     public Team assignProject(Long id, Long projectId, String username) {
         Team team = requireOwned(id, username);
+        if (!Objects.equals(team.getProjectId(), projectId)) {
+            long linked = entityManager.createQuery("select count(t) from KanbanTask t, KanbanBoard b where t.boardId=b.id and b.teamId=:team and (t.milestoneId is not null or t.checkpointId is not null)", Long.class)
+                    .setParameter("team", id).getSingleResult();
+            if (linked > 0) throw new BusinessRuleException("Remove Kanban milestone/checkpoint links before changing project");
+        }
         validateProject(team.getClassroomId(), projectId);
         team.setProjectId(projectId);
         return team;
     }
 
-    public void delete(Long id, String username) { teamRepository.delete(requireOwned(id, username)); }
+    public void delete(Long id, String username) {
+        Team team = requireOwned(id, username);
+        kanbanService.deleteBoard(id, username);
+        teamRepository.delete(team);
+    }
 
     @Transactional(readOnly = true)
     public com.cosre.cosre_backend.modules.team.dto.TeamWorkspaceResponse workspace(Long id, String username) {
@@ -117,7 +149,7 @@ public class TeamService {
     }
 
     public com.cosre.cosre_backend.modules.team.dto.TeamWorkspaceResponse setMilestoneDone(Long teamId, Long milestoneId, boolean done, String username) {
-        Team team = requireTeam(teamId); User actor = requireUser(username);
+        Team team = requireAccessible(teamId, username); User actor = requireUser(username);
         if (team.getLeader() == null || !team.getLeader().getId().equals(actor.getId())) throw new BusinessRuleException("Only the team leader can update milestones");
         var project = team.getProjectId() == null ? null : projectRepository.findById(team.getProjectId()).orElse(null);
         if (project == null || project.getMilestones().stream().noneMatch(item -> item.getId().equals(milestoneId))) throw new ResourceNotFoundException("Milestone not found in team project");
@@ -144,17 +176,31 @@ public class TeamService {
 
     private Team requireOwned(Long id, String username) {
         Team team = requireTeam(id);
-        if (!team.getLecturer().getUsername().equals(username)) throw new BusinessRuleException("You cannot manage this team");
+        User actor = requireUser(username);
+        if (actor.getRole() != RoleEnum.LECTURER || !team.getLecturer().getUsername().equals(username))
+            throw new org.springframework.security.access.AccessDeniedException("You cannot manage this team");
+        requireManagedClassroom(team.getClassroomId(), actor);
         return team;
     }
     private Team requireAccessible(Long id, String username) {
         Team team = requireTeam(id);
-        boolean member = team.getMembers().stream().anyMatch(user -> user.getUsername().equals(username));
-        if (!team.getLecturer().getUsername().equals(username) && !member) throw new BusinessRuleException("You cannot view this team");
+        User actor = requireUser(username);
+        var classroom = classroomRepository.findDetailedById(team.getClassroomId()).orElseThrow(() -> new ResourceNotFoundException("Classroom not found"));
+        boolean member = actor.getRole() == RoleEnum.STUDENT && team.getMembers().stream().anyMatch(user -> user.getUsername().equals(username))
+            && classroom.getStudents().stream().anyMatch(user -> user.getId().equals(actor.getId()));
+        boolean lecturer = actor.getRole() == RoleEnum.LECTURER && team.getLecturer().getId().equals(actor.getId())
+            && classroom.getLecturers().stream().anyMatch(user -> user.getId().equals(actor.getId()));
+        if (!lecturer && !member) throw new org.springframework.security.access.AccessDeniedException("You cannot view this team");
         return team;
     }
-    private Team requireTeam(Long id) { return teamRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Team not found")); }
-    private User requireUser(String username) { return userRepository.findByUsername(username).orElseThrow(() -> new ResourceNotFoundException("User not found")); }
+    private Team requireTeam(Long id) {
+        Team team = org.springframework.transaction.support.TransactionSynchronizationManager.isCurrentTransactionReadOnly()
+            ? entityManager.find(Team.class, id)
+            : entityManager.find(Team.class, id, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        if (team == null) throw new ResourceNotFoundException("Team not found");
+        return team;
+    }
+    private User requireUser(String username) { return userRepository.findByUsername(username).filter(User::isActive).orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Active account required")); }
     private User requireAvailableStudent(Long id, Long classroomId) {
         User user = userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Student not found"));
         if (user.getRole() != RoleEnum.STUDENT || !user.isActive()) throw new BusinessRuleException("Only active students can join a team");
@@ -165,7 +211,7 @@ public class TeamService {
     }
     private void requireManagedClassroom(Long classroomId, User lecturer) {
         var classroom = classroomRepository.findDetailedById(classroomId).orElseThrow(() -> new ResourceNotFoundException("Classroom not found"));
-        if (classroom.getLecturers().stream().noneMatch(user -> user.getId().equals(lecturer.getId()))) throw new BusinessRuleException("Lecturer is not assigned to this classroom");
+        if (lecturer.getRole() != RoleEnum.LECTURER || classroom.getLecturers().stream().noneMatch(user -> user.getId().equals(lecturer.getId()))) throw new org.springframework.security.access.AccessDeniedException("Lecturer is not assigned to this classroom");
     }
     private void validateProject(Long classroomId, Long projectId) {
         var project = projectRepository.findById(projectId).orElseThrow(() -> new ResourceNotFoundException("Project not found"));
