@@ -198,6 +198,9 @@ public class TeamService {
             ? entityManager.find(Team.class, id)
             : entityManager.find(Team.class, id, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         if (team == null) throw new ResourceNotFoundException("Team not found");
+        org.hibernate.Hibernate.initialize(team.getLecturer());
+        org.hibernate.Hibernate.initialize(team.getLeader());
+        org.hibernate.Hibernate.initialize(team.getMembers());
         return team;
     }
     private User requireUser(String username) { return userRepository.findByUsername(username).filter(User::isActive).orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Active account required")); }

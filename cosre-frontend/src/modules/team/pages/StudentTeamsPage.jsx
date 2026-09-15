@@ -28,7 +28,10 @@ export default function StudentTeamsPage() {
       {loading ? <div className="team-empty">Đang tải nhóm…</div> : teams.length === 0 ? <div className="team-empty"><Users size={36}/><h3>Bạn chưa thuộc nhóm nào</h3><p>Giảng viên cần thêm bạn vào một nhóm trước.</p></div> : <div className="team-grid">{teams.map((team) => <article className="team-card" key={team.id}>
         <div className="team-card-head"><span>LỚP #{team.classroomId}</span></div>
         <h2>{team.name}</h2><p>{team.description || 'Chưa có mô tả cho nhóm.'}</p>
-        <div className={`team-project ${team.projectId ? 'selected' : ''}`}><BookOpenCheck size={17}/>{team.projectId ? `Đề tài #${team.projectId}` : 'Giảng viên chưa gán đề tài'}</div>
+        <button type="button" className={`team-project ${team.projectId ? 'selected' : ''}`} disabled={!team.projectId}
+          onClick={() => navigate(`/teams/${team.id}/workspace#project-details`)}>
+          <BookOpenCheck size={17}/>{team.projectId ? `Xem đề tài #${team.projectId}` : 'Giảng viên chưa gán đề tài'}
+        </button>
         <button className="team-project" onClick={() => navigate(`/teams/${team.id}/workspace`)}><FolderKanban size={17}/> Mở workspace</button>
         <div className="team-members-title"><strong>Thành viên ({team.members.length})</strong></div>
         <div className="team-members">{team.members.map((member) => <div key={member.id}><span>{member.fullName?.slice(0, 1).toUpperCase() || '?'}</span><div><strong>{member.fullName}</strong><small>@{member.username}</small></div></div>)}</div>

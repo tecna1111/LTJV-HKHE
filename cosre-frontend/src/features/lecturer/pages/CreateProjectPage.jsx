@@ -85,8 +85,8 @@ export default function CreateProjectPage() {
         objectives: cleanObjectives,
       });
       setMilestones(suggested);
-    } catch {
-      setAiError("AI không tạo được mốc lúc này. Vui lòng thử lại hoặc thêm mốc thủ công.");
+    } catch (error) {
+      setAiError(getApiError(error, "AI không tạo được mốc lúc này. Vui lòng thử lại hoặc thêm mốc thủ công."));
     } finally {
       setAiLoading(false);
     }
