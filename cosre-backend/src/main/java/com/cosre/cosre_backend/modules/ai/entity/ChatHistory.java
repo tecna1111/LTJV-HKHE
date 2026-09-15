@@ -8,10 +8,10 @@ public class ChatHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 2000)
+    @Column(nullable = false, length = 4000)
     private String prompt;
 
-    @Column(nullable = false, length = 5000)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String answer;
 
     @Column(name = "user_id")

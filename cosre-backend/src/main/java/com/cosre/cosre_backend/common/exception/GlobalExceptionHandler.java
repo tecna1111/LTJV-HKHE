@@ -12,6 +12,11 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(org.springframework.security.access.AccessDeniedException exception) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ApiResponse<>(false, exception.getMessage(), null));
+    }
 
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -44,11 +49,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadRequest(IllegalArgumentException exception) {
         return ResponseEntity.badRequest().body(new ApiResponse<>(false, exception.getMessage(), null));
-    }
-    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
-    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(
-            org.springframework.security.access.AccessDeniedException exception) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiResponse<>(false, exception.getMessage(), null));
     }
         @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
     public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(
