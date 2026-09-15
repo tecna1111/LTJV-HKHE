@@ -60,6 +60,16 @@ public class AIService {
         this.contextService = contextService;
     }
 
+    @Transactional(readOnly = true)
+    public List<com.cosre.cosre_backend.modules.ai.dto.ChatHistoryResponse> history(Long teamId, String username) {
+        User user = requireUser(username);
+        if (teamId != null) teamAccessService.requireViewAccess(teamId, username);
+        var entries = new ArrayList<>(chatHistoryRepository.findTop100ByUserIdAndTeamIdOrderByIdDesc(user.getId(), teamId));
+        java.util.Collections.reverse(entries);
+        return entries.stream().map(item -> new com.cosre.cosre_backend.modules.ai.dto.ChatHistoryResponse(
+                item.getId(), item.getPrompt(), item.getAnswer(), item.getCreatedAt())).toList();
+    }
+
     public ChatResponse chat(ChatRequest request, String username) {
         User user = requireUser(username);
         String context = request.teamId() == null ? "" : contextService.teamContext(request.teamId(), username);

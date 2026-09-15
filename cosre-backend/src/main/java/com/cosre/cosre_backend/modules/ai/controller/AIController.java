@@ -19,6 +19,13 @@ public class AIController {
         this.aiService = aiService;
     }
 
+    @GetMapping("/chat/history")
+    @PreAuthorize("hasAnyRole('LECTURER','STUDENT')")
+    public ApiResponse<java.util.List<com.cosre.cosre_backend.modules.ai.dto.ChatHistoryResponse>> history(
+            @RequestParam(required = false) Long teamId, Authentication auth) {
+        return new ApiResponse<>(true, "Chat history loaded", aiService.history(teamId, auth.getName()));
+    }
+
     @PostMapping("/chat")
     @PreAuthorize("hasAnyRole('LECTURER','STUDENT')")
     public ResponseEntity<ApiResponse<ChatResponse>> chat(

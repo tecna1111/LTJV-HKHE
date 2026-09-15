@@ -1,7 +1,7 @@
 package com.cosre.cosre_backend.modules.ai.client;
 
 import com.cosre.cosre_backend.common.exception.ExternalServiceException;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
