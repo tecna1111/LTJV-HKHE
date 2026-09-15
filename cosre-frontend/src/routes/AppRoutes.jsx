@@ -19,6 +19,7 @@ import ClassroomDetailPage from '../modules/classroom/pages/ClassroomDetailPage'
 import ClassroomImportPage from '../modules/classroom/pages/ClassroomImportPage';
 import ProjectWorkflowPage from '../modules/workflow/pages/ProjectWorkflowPage';
 import TeamWorkspacePage from '../modules/team/pages/TeamWorkspacePage';
+import KanbanPage from '../modules/team/pages/KanbanPage';
 import WhiteboardPage from '../modules/collaboration/pages/WhiteboardPage';
 import StudentTeamsPage from '../modules/team/pages/StudentTeamsPage';
 import ChatPage from '../modules/chat/pages/ChatPage';
@@ -39,6 +40,7 @@ function AppRoutes() {
         <Route path="/workflow" element={<ProtectedRoute><ProjectWorkflowPage /></ProtectedRoute>} />
         <Route path="/classrooms" element={<ProtectedRoute><MyClassroomsPage /></ProtectedRoute>} />
         <Route path="/teams/:id/workspace" element={<ProtectedRoute><TeamWorkspacePage /></ProtectedRoute>} />
+        <Route path="/teams/:id/kanban" element={<ProtectedRoute><KanbanPage /></ProtectedRoute>} />
         <Route path="/teams/:id/whiteboard" element={<ProtectedRoute><WhiteboardPage /></ProtectedRoute>} />
         <Route path="/student/teams" element={<ProtectedRoute requiredRole="STUDENT"><StudentTeamsPage /></ProtectedRoute>} />
         <Route path="/messages" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
