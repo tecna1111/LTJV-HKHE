@@ -23,8 +23,8 @@ public class TeamController {
     }
     @GetMapping("/classroom/{classroomId}")
     @PreAuthorize("hasAnyRole('LECTURER','HEAD_DEPT','STAFF')")
-    public ApiResponse<List<TeamResponse>> byClassroom(@PathVariable Long classroomId) {
-        return ok("Teams loaded", service.listByClassroom(classroomId).stream().map(TeamResponse::from).toList());
+    public ApiResponse<List<TeamResponse>> byClassroom(@PathVariable Long classroomId, Authentication auth) {
+        return ok("Teams loaded", service.listByClassroom(classroomId, auth.getName()).stream().map(TeamResponse::from).toList());
     }
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('LECTURER','STUDENT')")
@@ -40,7 +40,7 @@ public class TeamController {
         return ResponseEntity.status(201).body(ok("Team created", TeamResponse.from(service.create(request, auth.getName()))));
     }
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('LECTURER')")
+    @PreAuthorize("hasAnyRole('LECTURER','STUDENT')")
     public ApiResponse<TeamResponse> update(@PathVariable Long id, @Valid @RequestBody UpdateTeamRequest request, Authentication auth) { return ok("Team updated", TeamResponse.from(service.update(id, request, auth.getName()))); }
     @PostMapping("/{id}/members")
     @PreAuthorize("hasRole('LECTURER')")
