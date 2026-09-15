@@ -45,7 +45,7 @@ const ROLE_NAV = {
   STUDENT: [
     ['Kết quả cuối dự án', ClipboardCheck, '/evaluations/final'], ['Phản hồi câu trả lời', MessageSquare, '/evaluations/feedback'],
     ['Tổng quan', LayoutDashboard], ['Lớp học của tôi', BookOpen, '/classrooms'], ['Workspace nhóm', FolderKanban, '/student/teams'],
-    ['Đánh giá chéo', ClipboardCheck, '/peer-evaluations'], ['Nhiệm vụ', ClipboardCheck], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'], ['Lịch họp', Video, '/meetings'],
+    ['Đánh giá chéo', ClipboardCheck, '/peer-evaluations'], ['Nhiệm vụ', ClipboardCheck, '/student/tasks'], ['Tài nguyên', GraduationCap, '/resources'], ['Tin nhắn', MessageSquare, '/messages'], ['Lịch họp', Video, '/meetings'],
   ],
 };
 
@@ -70,7 +70,7 @@ const ROLE_MODULES = {
   STUDENT: [
     ['Lớp học của tôi', 'Các lớp được phân công sẽ xuất hiện tại đây.', BookOpen, '/classrooms'],
     ['Workspace nhóm', 'Không gian dự án sẽ sẵn sàng khi bạn được xếp nhóm.', FolderKanban, '/student/teams'],
-    ['Nhiệm vụ', 'Nhiệm vụ được giao sẽ xuất hiện tại đây.', ClipboardCheck],
+    ['Nhiệm vụ', 'Theo dõi công việc được giao, thời hạn và tiến độ trong nhóm.', ClipboardCheck, '/student/tasks'],
   ],
 };
 
