@@ -11,7 +11,7 @@
 .pe-topbar small, .pe-heading span, .pe-modal-title span { color:#2563eb; font-size:10px; font-weight:850; letter-spacing:.14em; }
 .pe-topbar strong { font-size:13px; }
 .pe-topbar > button { width:38px; height:38px; display:grid; place-items:center; border:1px solid #e2e8f0; border-radius:11px; background:#fff; color:#64748b; cursor:pointer; }
-.pe-content { padding:34px; max-width:1300px; margin:auto; }
+.pe-content { --blue:#2563eb; --navy:#14213d; --muted:#64748b; padding:34px; max-width:1300px; margin:auto; }
 .pe-heading h1 { margin:7px 0 4px; font-size:30px; letter-spacing:-.04em; }
 .pe-heading p { margin:0; color:var(--muted); }
 .pe-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:27px 0; }
@@ -92,3 +92,10 @@
   .pe-stats { grid-template-columns:1fr; }
   .pe-criteria-inputs { grid-template-columns:1fr; }
 }
+.pe-context-panel{display:flex;align-items:center;gap:24px;flex-wrap:wrap;background:#fff;border:1px solid #e0e7f1;border-radius:20px;padding:24px;margin-bottom:28px}
+.pe-context-panel>label{display:flex;flex-direction:column;gap:10px;flex:1;min-width:200px;font-size:14px;font-weight:700;color:#334155}
+.pe-context-panel select{width:100%;padding:12px 14px;border:1px solid #dce5f2;border-radius:12px;background:#f8faff;color:#182238;font:inherit}
+.pe-round-state{display:flex;align-items:center;gap:12px;flex:2;min-width:220px;padding:16px;border-radius:14px;background:#fff7e8;color:#96610b}
+.pe-round-state svg{flex-shrink:0}.pe-round-state strong{font-size:14px}.pe-round-state p{margin:5px 0 0;font-size:13px;line-height:1.5}.pe-round-state.open{background:#ecfdf5;color:#087855}.pe-round-state.locked{background:#f1f5f9;color:#475569}
+.pe-refresh{display:flex;align-items:center;gap:8px;padding:12px 16px;border:1px solid #dce5f2;border-radius:12px;background:#fff;color:#2860ef;cursor:pointer;font:inherit}.pe-refresh:disabled{opacity:.6;cursor:wait}.pe-context-panel :is(button,select):focus-visible{outline:3px solid #93b4ff;outline-offset:3px}
+@media(max-width:700px){.pe-context-panel{align-items:stretch;padding:18px;gap:16px}.pe-context-panel>label,.pe-round-state{flex-basis:100%;min-width:0}}

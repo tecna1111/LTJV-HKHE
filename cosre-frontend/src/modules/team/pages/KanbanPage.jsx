@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, RefreshCw } from 'lucide-react';
 import { DashboardShell } from '../../dashboard/pages/DashboardPage';
@@ -15,6 +15,14 @@ export default function KanbanPage() {
   const role = useAuthStore(s => s.role);
   const displayName = useAuthStore(s => s.fullName || s.username);
   const [board, setBoard] = useState(null);
+  const focusedTask = useRef('');
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (board && /^#task-\d+$/.test(hash) && focusedTask.current !== `${id}${hash}`) {
+      document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'center' });
+      focusedTask.current = `${id}${hash}`;
+    }
+  }, [board, id]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [assignee, setAssignee] = useState('');
@@ -77,7 +85,7 @@ export default function KanbanPage() {
         <section className="kanban-columns" aria-label="Bảng công việc" aria-busy={busy}>
           {columns.map(([status, label]) => <section key={status} className={`kanban-column kanban-column--${status.toLowerCase()}`} onDragOver={e => e.preventDefault()} onDrop={e => drop(e, status)}>
             <h2>{label} <small>{board.tasks.filter(t => t.status === status && filtered(t)).length}</small></h2>
-            {board.tasks.filter(t => t.status === status && filtered(t)).map(task => <article key={task.id} className="kanban-card" draggable={!busy}
+            {board.tasks.filter(t => t.status === status && filtered(t)).map(task => <article key={task.id} id={`task-${task.id}`} className="kanban-card" draggable={!busy}
               onDragStart={e => e.dataTransfer.setData('text/plain', String(task.id))} onDragOver={e => e.preventDefault()} onDrop={e => drop(e, status, task.id)}>
               <h3>{task.title}</h3><p>{task.description}</p>
               <div className="kanban-meta">Trọng số {task.weight} · {task.dueOn ? `Hạn ${task.dueOn}` : 'Chưa đặt hạn'}</div>

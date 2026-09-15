@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
-  CheckCircle2, ClipboardList, Inbox, Info, Lock, LogOut, RefreshCw,
+  CheckCircle2, Inbox, Info, Lock, RefreshCw,
   Send, Star, Users, X,
 } from 'lucide-react';
-import BrandLogo from '../../../components/BrandLogo';
+import { DashboardShell } from '../../dashboard/pages/DashboardPage';
 import { getApiError } from '../../../config/axios';
 import useAuthStore from '../../../store/useAuthStore';
 import { getTeams } from '../../team/teamService';
@@ -133,8 +133,7 @@ function EvaluationModal({ teammate, criteria, existing, onClose, onSubmit, savi
 }
 
 function PeerEvaluationPage() {
-  const navigate = useNavigate();
-  const { fullName, username, clearAuth } = useAuthStore();
+  const { fullName, username } = useAuthStore();
 
   const [params, setParams] = useSearchParams();
   const selectedId = params.get('teamId');
@@ -152,6 +151,7 @@ function PeerEvaluationPage() {
   const loadAll = useCallback(async () => {
     setLoading(true);
     setFeedback({ type: '', text: '' });
+    setCriteria([]); setGiven([]); setReceived([]); setRound(null);
     try {
       const teamsResult = await getTeams();
       const teams = teamsResult.data || [];
@@ -231,25 +231,13 @@ function PeerEvaluationPage() {
     || `Người dùng #${userId}`;
 
   return (
-    <main className="pe-shell">
-      <aside className="pe-sidebar">
-        <BrandLogo />
-        <nav>
-          <button onClick={() => navigate('/dashboard')}><ClipboardList size={19} /> Tổng quan</button>
-          <button className="active"><Star size={19} /> Đánh giá chéo</button><button onClick={() => navigate('/evaluations/final')}>Kết quả cuối dự án</button>
-        </nav>
-        <button className="pe-logout" onClick={() => { clearAuth(); navigate('/login'); }}><LogOut size={18} /> Đăng xuất</button>
-      </aside>
-
-      <section className="pe-main">
-        <header className="pe-topbar">
-          <div><small>WORKSPACE / PEER EVALUATION</small><strong>Xin chào, {fullName || username}</strong></div>
-          <button onClick={loadAll} aria-label="Làm mới"><RefreshCw size={18} /></button>
-        </header>
-
+    <DashboardShell role="STUDENT" displayName={fullName || username} activePath="/peer-evaluations" pageTitle="Đánh giá chéo">
         <div className="pe-content">
-          <label>Nhóm đánh giá <select value={team?.id || ''} disabled={loading || saving} onChange={e => { setActiveTeammate(null);setParams({ teamId: e.target.value }); }}><option value="">Chọn nhóm</option>{allTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
-          {round && <p>{round.locked ? 'Đợt đã khóa' : round.finalOpen ? 'Đợt đánh giá đang mở' : 'Chờ giảng viên mở đợt đánh giá'}</p>}
+          <section className="pe-context-panel" aria-label="Nhóm và đợt đánh giá">
+            <label>Nhóm đánh giá<select value={team?.id || ''} disabled={loading || saving || !allTeams.length} onChange={e => { setActiveTeammate(null);setParams({ teamId: e.target.value }); }}><option value="" disabled>Chọn nhóm</option>{allTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+            <div className={`pe-round-state ${round?.locked ? 'locked' : round?.finalOpen ? 'open' : 'waiting'}`} role="status"><Info size={20}/><div><strong>{loading ? 'Đang tải đợt đánh giá…' : round?.locked ? 'Đợt đánh giá đã khóa' : round?.finalOpen ? 'Đợt đánh giá đang mở' : 'Chờ giảng viên mở đợt đánh giá'}</strong><p>{round?.locked ? 'Bạn có thể xem lại các đánh giá đã gửi.' : round?.finalOpen ? 'Chọn thành viên bên dưới để gửi đánh giá.' : 'Bạn có thể gửi đánh giá khi giảng viên mở đợt cho nhóm.'}</p></div></div>
+            <button className="pe-refresh" onClick={loadAll} disabled={loading || saving} aria-label="Tải lại đánh giá"><RefreshCw size={18}/><span>Tải lại</span></button>
+          </section>
           <div className="pe-heading">
             <div>
               <span>ĐÁNH GIÁ CHÉO</span>
@@ -332,7 +320,6 @@ function PeerEvaluationPage() {
             </>
           )}
         </div>
-      </section>
 
       {activeTeammate && (
         <EvaluationModal
@@ -344,7 +331,7 @@ function PeerEvaluationPage() {
           onSubmit={handleSubmit}
         />
       )}
-    </main>
+    </DashboardShell>
   );
 }
 

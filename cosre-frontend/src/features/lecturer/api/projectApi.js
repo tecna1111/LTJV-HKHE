@@ -26,14 +26,6 @@ export async function generateMilestonesWithAI({ syllabusId, objectives }) {
   return milestones;
 }
 
-export async function generateProjectDraftWithAI({ syllabusId, topic }) {
-  const { data } = await apiClient.post('/ai/projects/draft', { syllabusId, topic });
-  const draft = data.data;
-  if (!draft?.title || !draft?.description || !Array.isArray(draft.objectives)
-      || !Array.isArray(draft.milestones)) throw new Error('AI response is missing project information');
-  return draft;
-}
-
 export async function createProject(payload) {
   const { data } = await apiClient.post("/projects", {
     ...payload,

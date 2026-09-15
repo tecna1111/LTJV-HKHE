@@ -4,7 +4,6 @@ import com.cosre.cosre_backend.common.dto.ApiResponse;
 import com.cosre.cosre_backend.modules.resource.dto.ResourceResponse;
 import com.cosre.cosre_backend.modules.resource.entity.ResourceFile;
 import com.cosre.cosre_backend.modules.resource.service.ResourceService;
-import com.cosre.cosre_backend.modules.notification.service.NotificationService;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -23,13 +22,12 @@ import java.util.List;
 @RequestMapping("/api/v1/resources")
 public class ResourceController {
     private final ResourceService resourceService;
-    private final NotificationService notifications;
 
-    public ResourceController(ResourceService resourceService, NotificationService notifications) {
+    public ResourceController(ResourceService resourceService) {
         this.resourceService = resourceService;
-        this.notifications = notifications;
     }
 
+    // Giảng viên/Nhân viên/Admin tải tài liệu môn học lên cho một lớp học.
     @PostMapping(value = "/classroom/{classroomId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('ADMIN','STAFF','LECTURER')")
     public ResponseEntity<ApiResponse<ResourceResponse>> uploadClassMaterial(
@@ -39,11 +37,10 @@ public class ResourceController {
             @RequestParam(required = false) String description,
             Authentication auth) {
         ResourceFile resource = resourceService.uploadClassMaterial(classroomId, title, description, file, auth.getName());
-        notifications.notifyClassroomEvent(classroomId, auth.getName(), "RESOURCE_UPLOADED:" + resource.getId(),
-                "CLASS_RESOURCE", "Tài liệu mới của lớp", resource.getTitle(), "/resources?type=classroom&id=" + classroomId);
         return ResponseEntity.status(201).body(ok("Resource uploaded", ResourceResponse.from(resource)));
     }
 
+    // Sinh viên/Giảng viên tải file bài nộp lên cho một nhóm.
     @PostMapping(value = "/team/{teamId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('STUDENT','LECTURER')")
     public ResponseEntity<ApiResponse<ResourceResponse>> uploadTeamSubmission(
@@ -53,23 +50,25 @@ public class ResourceController {
             @RequestParam(required = false) String description,
             Authentication auth) {
         ResourceFile resource = resourceService.uploadTeamSubmission(teamId, title, description, file, auth.getName());
-        notifications.notifyTeamEvent(teamId, auth.getName(), "RESOURCE_UPLOADED:" + resource.getId(),
-                "TEAM_RESOURCE", "Tài nguyên mới của nhóm", resource.getTitle(), "/resources?type=team&id=" + teamId);
         return ResponseEntity.status(201).body(ok("Resource uploaded", ResourceResponse.from(resource)));
     }
 
+    // Danh sách tài liệu của một lớp học. Sinh viên chỉ xem được lớp mình theo học
+    // (kiểm tra quyền trong Service, ném AccessDeniedException nếu không thuộc lớp).
     @GetMapping("/classroom/{classroomId}")
     @PreAuthorize("hasAnyRole('ADMIN','STAFF','HEAD_DEPT','LECTURER','STUDENT')")
     public ApiResponse<List<ResourceResponse>> byClassroom(@PathVariable Long classroomId, Authentication auth) {
         return ok("Resources loaded", resourceService.listByClassroom(classroomId, auth.getName()).stream().map(ResourceResponse::from).toList());
     }
 
+    // Danh sách file bài nộp của một nhóm.
     @GetMapping("/team/{teamId}")
     @PreAuthorize("hasAnyRole('LECTURER','STUDENT')")
     public ApiResponse<List<ResourceResponse>> byTeam(@PathVariable Long teamId, Authentication auth) {
         return ok("Resources loaded", resourceService.listByTeam(teamId, auth.getName()).stream().map(ResourceResponse::from).toList());
     }
 
+    // Service checks classroom/team membership before returning a file.
     @GetMapping("/{id}/download")
     public ResponseEntity<Resource> download(@PathVariable Long id, Authentication auth) {
         ResourceService.FileDownload download = resourceService.loadForDownload(id, auth.getName());
@@ -81,6 +80,7 @@ public class ResourceController {
                 .body(fileResource);
     }
 
+    // Xóa resource (kiểm tra quyền sở hữu/role trong Service).
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','STAFF','LECTURER','STUDENT')")
     public ApiResponse<Void> delete(@PathVariable Long id, Authentication auth) {
