@@ -9,6 +9,8 @@ import com.cosre.cosre_backend.modules.ai.dto.ChatRequest;
 import com.cosre.cosre_backend.modules.ai.dto.ChatResponse;
 import com.cosre.cosre_backend.modules.ai.dto.GenerateMilestonesRequest;
 import com.cosre.cosre_backend.modules.ai.dto.GenerateMilestonesResponse;
+import com.cosre.cosre_backend.modules.ai.dto.GenerateProjectDraftRequest;
+import com.cosre.cosre_backend.modules.ai.dto.GenerateProjectDraftResponse;
 import com.cosre.cosre_backend.modules.ai.dto.GenerateMilestonesResponse.GeneratedMilestone;
 import com.cosre.cosre_backend.modules.ai.entity.ChatHistory;
 import com.cosre.cosre_backend.modules.ai.repository.ChatHistoryRepository;
@@ -42,6 +44,14 @@ public class AIService {
 
     private static final int MIN_MILESTONES = 3;
     private static final int MAX_MILESTONES = 8;
+    private static final String PROJECT_DRAFT_SYSTEM_PROMPT = """
+            Bạn là trợ lý gợi ý đề tài đồ án học thuật. Chỉ trả về một object JSON hợp lệ,
+            không thêm Markdown hoặc giải thích. Schema:
+            {"title":"...","description":"...","objectives":["..."],
+             "milestones":[{"title":"...","description":"...","dueOffsetDays":7}]}
+            Title ngắn gọn, description mô tả phạm vi dự án, objectives là 2 đến 10 mục tiêu cụ thể.
+            Tạo 3 đến 8 milestones; dueOffsetDays là số nguyên dương tăng dần.
+            """;
 
     private final AIClient aiClient;
     private final ChatHistoryRepository chatHistoryRepository;
@@ -107,6 +117,42 @@ public class AIService {
         String raw = aiClient.generate(MILESTONE_SYSTEM_PROMPT, userPrompt);
 
         return parseAndValidate(raw);
+    }
+
+    @Transactional(readOnly = true)
+    public GenerateProjectDraftResponse generateProjectDraft(GenerateProjectDraftRequest request, String username) {
+        User actor = requireUser(username);
+        Syllabus syllabus = syllabusRepository.findDetailedById(request.syllabusId())
+                .orElseThrow(() -> new ResourceNotFoundException("Syllabus not found"));
+        contextService.requireSyllabusAccess(syllabus, actor);
+        if (!syllabus.isActive()) throw new BusinessRuleException("Syllabus is not active");
+        String topic = request.topic() == null ? "" : request.topic().trim();
+        String prompt = buildMilestonePrompt(syllabus) + "\nĐề tài giảng viên muốn tham khảo: " + topic;
+        String raw = aiClient.generate(PROJECT_DRAFT_SYSTEM_PROMPT, prompt);
+        var generatedMilestones = parseAndValidate(raw).milestones();
+        JsonNode root;
+        try {
+            root = objectMapper.readTree(stripMarkdownFences(raw));
+        } catch (Exception exception) {
+            throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI trả về thông tin dự án không đúng định dạng JSON");
+        }
+        JsonNode titleNode = root.path("title");
+        JsonNode descriptionNode = root.path("description");
+        JsonNode objectivesNode = root.path("objectives");
+        if (!titleNode.isTextual() || titleNode.asText().isBlank() || titleNode.asText().length() > 200
+                || !descriptionNode.isTextual() || descriptionNode.asText().isBlank()
+                || descriptionNode.asText().length() > 4000 || !objectivesNode.isArray()
+                || objectivesNode.size() < 2 || objectivesNode.size() > 10) {
+            throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI trả về thông tin dự án không hợp lệ");
+        }
+        List<String> objectives = new ArrayList<>();
+        for (JsonNode objective : objectivesNode) {
+            if (!objective.isTextual() || objective.asText().isBlank() || objective.asText().length() > 500)
+                throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI trả về mục tiêu không hợp lệ");
+            objectives.add(objective.asText().trim());
+        }
+        return new GenerateProjectDraftResponse(titleNode.asText().trim(), descriptionNode.asText().trim(),
+                objectives, generatedMilestones);
     }
 
     private String buildMilestonePrompt(Syllabus syllabus) {
