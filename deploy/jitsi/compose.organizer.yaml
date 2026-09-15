@@ -1,0 +1,25 @@
+# Merge with docker-jitsi-meet's docker-compose.yml (stable-11146-2).
+# COSRE_MEETING_PLUGIN is the absolute path to mod_cosre_meeting_owner.lua.
+services:
+  web:
+    environment:
+      DISABLE_GRANT_MODERATOR: "1"
+      ENABLE_END_CONFERENCE: "1"
+  prosody:
+    environment:
+      ENABLE_AUTH: "1"
+      AUTH_TYPE: jwt
+      ENABLE_GUESTS: "0"
+      JWT_ALLOW_EMPTY: "0"
+      JWT_TOKEN_AUTH_MODULE: token_verification
+      WAIT_FOR_HOST_DISABLE_AUTO_OWNERS: "1"
+      XMPP_MUC_MODULES: token_affiliation,cosre_meeting_owner
+      ENABLE_END_CONFERENCE: "1"
+    volumes:
+      - ${COSRE_MEETING_PLUGIN:?Set COSRE_MEETING_PLUGIN to the absolute plugin path}:/prosody-plugins-custom/mod_cosre_meeting_owner.lua:ro
+  jicofo:
+    environment:
+      # Prosody verifies JWTs; Jicofo must not promote every authenticated user.
+      JICOFO_ENABLE_AUTH: "0"
+      ENABLE_AUTO_OWNER: "0"
+      ENABLE_MODERATOR_CHECKS: "1"
