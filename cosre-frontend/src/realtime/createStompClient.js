@@ -9,6 +9,7 @@ export function createStompClient({ onConnect, onDisconnect, onError }) {
   const client = new Client({
     webSocketFactory: () => new SockJS(`${backendUrl}/ws`),
     connectHeaders: { Authorization: `Bearer ${getAuthToken()}` },
+    beforeConnect: () => { client.connectHeaders = { Authorization: `Bearer ${getAuthToken()}` }; },
     reconnectDelay: 4000,
     heartbeatIncoming: 10000,
     heartbeatOutgoing: 10000,

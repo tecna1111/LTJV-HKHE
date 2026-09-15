@@ -29,6 +29,7 @@ public class GeminiAIClient implements AIClient {
             @Value("${app.ai.gemini.base-url:https://generativelanguage.googleapis.com}") String baseUrl,
             @Value("${app.ai.timeout-seconds:30}") long timeoutSeconds) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        if (timeoutSeconds < 1 || timeoutSeconds > 120) throw new IllegalArgumentException("AI timeout must be between 1 and 120 seconds");
         int timeoutMs = (int) Duration.ofSeconds(timeoutSeconds).toMillis();
         requestFactory.setConnectTimeout(timeoutMs);
         requestFactory.setReadTimeout(timeoutMs);
@@ -55,18 +56,34 @@ public class GeminiAIClient implements AIClient {
 
         JsonNode response;
         try {
-            response = restClient.post()
-                    .uri("/v1beta/models/{model}:generateContent?key={key}", model, apiKey)
+            String body = restClient.post()
+                    .uri("/v1beta/models/{model}:generateContent", model)
+                    .header("x-goog-api-key", apiKey)
                     .body(requestBody)
                     .retrieve()
-                    .body(JsonNode.class);
+                    .body(String.class);
+            if (body == null || body.length() > 1000000) {
+                throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI provider trả về dữ liệu rỗng hoặc quá lớn");
+            }
+            response = new com.fasterxml.jackson.databind.ObjectMapper().readTree(body);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
+            throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI provider trả về dữ liệu không hợp lệ");
         } catch (ResourceAccessException exception) {
-            throw new ExternalServiceException(HttpStatus.GATEWAY_TIMEOUT, "AI provider không phản hồi kịp thời");
+            Throwable cause = exception;
+            while (cause != null) {
+                if (cause instanceof java.net.SocketTimeoutException) {
+                    throw new ExternalServiceException(HttpStatus.GATEWAY_TIMEOUT, "AI provider không phản hồi kịp thời");
+                }
+                cause = cause.getCause();
+            }
+            throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "Không thể kết nối tới dịch vụ AI");
         } catch (RestClientResponseException exception) {
             if (exception.getStatusCode().value() == 429) {
-                throw new ExternalServiceException(HttpStatus.BAD_REQUEST, "Đã vượt giới hạn số request tới AI, vui lòng thử lại sau");
+                throw new ExternalServiceException(HttpStatus.TOO_MANY_REQUESTS, "Đã vượt giới hạn số request tới AI, vui lòng thử lại sau");
             }
             throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI provider trả về lỗi");
+        } catch (org.springframework.web.client.RestClientException exception) {
+            throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI provider trả về dữ liệu không hợp lệ");
         }
 
         if (response == null) {
@@ -74,7 +91,7 @@ public class GeminiAIClient implements AIClient {
         }
 
         JsonNode textNode = response.path("candidates").path(0).path("content").path("parts").path(0).path("text");
-        if (textNode.isMissingNode() || textNode.asText().isBlank()) {
+        if (!textNode.isTextual() || textNode.asText().isBlank() || textNode.asText().length() > 64000) {
             throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "AI provider trả về nội dung không hợp lệ");
         }
 

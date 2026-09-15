@@ -39,14 +39,14 @@ export default function MilestoneEditor({
     <div className="milestone-editor">
       <div className="milestone-editor-header">
         <label className="field-label">Cột mốc dự án (Milestones)</label>
-        <button
+        {onGenerateAI && <button
           type="button"
           className="btn-ai-generate"
           onClick={onGenerateAI}
           disabled={aiLoading}
         >
           {aiLoading ? "AI đang tạo mốc..." : "✨ Tạo mốc bằng AI"}
-        </button>
+        </button>}
       </div>
 
       {aiError && <p className="ai-error">{aiError}</p>}
