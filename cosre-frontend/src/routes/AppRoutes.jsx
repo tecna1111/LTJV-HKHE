@@ -23,6 +23,7 @@ import KanbanPage from '../modules/team/pages/KanbanPage';
 import WhiteboardPage from '../modules/collaboration/pages/WhiteboardPage';
 import TextEditorPage from '../modules/collaboration/pages/TextEditorPage';
 import StudentTeamsPage from '../modules/team/pages/StudentTeamsPage';
+import MilestoneQuestionsPage from '../modules/team/pages/MilestoneQuestionsPage';
 import ChatPage from '../modules/chat/pages/ChatPage';
 import ResourceLibraryPage from '../modules/resource/pages/ResourceLibraryPage';
 import MeetingPage from '../modules/meeting/pages/MeetingPage';
@@ -42,6 +43,7 @@ function AppRoutes() {
         <Route path="/classrooms" element={<ProtectedRoute><MyClassroomsPage /></ProtectedRoute>} />
         <Route path="/teams/:id/workspace" element={<ProtectedRoute><TeamWorkspacePage /></ProtectedRoute>} />
         <Route path="/teams/:id/kanban" element={<ProtectedRoute><KanbanPage /></ProtectedRoute>} />
+        <Route path="/teams/:id/milestone-questions" element={<ProtectedRoute><MilestoneQuestionsPage /></ProtectedRoute>} />
         <Route path="/teams/:id/whiteboard" element={<ProtectedRoute><WhiteboardPage /></ProtectedRoute>} />
         <Route path="/teams/:id/document" element={<ProtectedRoute><TextEditorPage /></ProtectedRoute>} />
         <Route path="/student/teams" element={<ProtectedRoute requiredRole="STUDENT"><StudentTeamsPage /></ProtectedRoute>} />
