@@ -36,7 +36,7 @@ public class AIController {
     }
 
     @PostMapping("/milestones/generate")
-    @PreAuthorize("hasAnyRole('LECTURER','STUDENT')")
+    @PreAuthorize("hasRole('LECTURER')")
     public ResponseEntity<ApiResponse<GenerateMilestonesResponse>> generateMilestones(
             @Valid @RequestBody GenerateMilestonesRequest request, Authentication auth) {
 

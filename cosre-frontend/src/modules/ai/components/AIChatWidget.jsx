@@ -10,6 +10,10 @@ const welcome = { role: 'assistant', text: 'Xin chào! Mình là COSRE AI. Bạn
 export default function AIChatWidget() {
   const location = useLocation();
   const teamId = useMemo(() => location.pathname.match(/^\/teams\/(\d+)/)?.[1] || null, [location.pathname]);
+  return <AIChatSession key={teamId || 'general'} teamId={teamId} />;
+}
+
+function AIChatSession({ teamId }) {
   const [open, setOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState([welcome]);
