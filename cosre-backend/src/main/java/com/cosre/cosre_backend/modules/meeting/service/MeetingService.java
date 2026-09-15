@@ -57,7 +57,6 @@ public class MeetingService {
         apply(value, request); value.setRoomCode("cosre-" + UUID.randomUUID()); value = repository.save(value);
         notificationService.notifyMeeting(team, value, "MEETING_CREATED"); return MeetingResponse.from(value, null);
     }
-    /** Starts a room now while preserving the same audit/history and membership controls as scheduled meetings. */
     public MeetingJoinResponse startInstant(Long teamId, String username) {
         Team team = requireTeam(teamId); User actor = requireUser(username); requireOrganizer(team, actor);
         LocalDateTime now = LocalDateTime.now();
@@ -89,12 +88,14 @@ public class MeetingService {
         Key signingKey = Keys.hmacShaKeyFor(jitsiSecret.getBytes(StandardCharsets.UTF_8));
         String displayName = displayName(user);
         String email = user.getEmail() == null ? "" : user.getEmail();
+        boolean organizer = user.getId().equals(value.getOrganizerId());
         // These claims match docker-jitsi-meet JWT authentication: app ID is both issuer/audience;
         // subject is the protected Jitsi host, never the COSRE username.
         String token = Jwts.builder().setHeaderParam("typ", "JWT").setIssuer(jitsiAppId).setAudience(jitsiAppId)
                 .setSubject(jitsiDomain).setIssuedAt(java.util.Date.from(now)).setExpiration(java.util.Date.from(expires))
                 .claim("room", value.getRoomCode()).claim("context", java.util.Map.of("user", java.util.Map.of(
-                        "id", String.valueOf(user.getId()), "name", displayName, "email", email)))
+                        "id", String.valueOf(user.getId()), "name", displayName, "email", email,
+                        "affiliation", organizer ? "owner" : "member", "moderator", organizer)))
                 .signWith(signingKey, SignatureAlgorithm.HS256).compact();
         return new MeetingJoinResponse(value.getRoomCode(), meetingBaseUrl + "/" + value.getRoomCode() + "?jwt=" + token,
                 token, expires.getEpochSecond());
