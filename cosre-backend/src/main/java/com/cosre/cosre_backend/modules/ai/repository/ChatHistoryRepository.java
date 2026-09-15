@@ -7,5 +7,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ChatHistoryRepository 
    extends JpaRepository<ChatHistory,Long> {
-
+    java.util.List<ChatHistory> findTop100ByUserIdAndTeamIdOrderByIdDesc(Long userId, Long teamId);
 }
